@@ -1,8 +1,8 @@
 `mol_ecol`
 ==========
 
-Code for Molecular Ecology, Spring 2017
+Code for Molecular Ecology paper, Spring 2017
 -----------
 
 
-Lucas Nell
+Author: Lucas Nell
