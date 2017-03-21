@@ -1,11 +1,29 @@
 #' ---
 #' title: 'Digest genome'
 #' author: 'Lucas Nell'
-#' date: '`r format(Sys.Date())`'
+#' date: '19 March 2017'
 #' output: github_document
 #' ---
 #' 
+#' *Updated `r format(Sys.Date(), '%d %B %Y')`*
 #' 
+#' 
+#' In this script I perform in silico digestions of the aphid genome using multiple 
+#' restriction enzymes.
+#' Once enzymes are chosen, I write the resulting fragments to fasta files.
+#' 
+#' 
+#' ## Loading packages:
+#' 
+#+ packages
+suppressPackageStartupMessages(
+    suppressWarnings({
+        library(MASS)
+        library(SimRAD)
+        library(tidyverse)
+        library(fitdistrplus)
+    })
+)
 #' 
 #' *Note*: Installing `SimRAD` requires the following code:
 #' 
@@ -17,36 +35,86 @@
 #' install.packages('SimRAD')
 #' ```
 #' 
-
-
-#+ packages, echo = FALSE
-suppressPackageStartupMessages(
-    suppressWarnings({
-        library(SimRAD)
-        library(tidyverse)
-        library(fitdistrplus)
-    })
-)
-
-
-#+ 
+#' 
+#' # Make subset of genome
+#' 
+#' This converts the compressed fasta file of the aphid genome to a single string
+#' containing a random 10% of the sequences in the file.
+#' 
+#+ make_genome
 set.seed(699)
 genome_seq <- ref.DNAseq('aphid_genome.fa.gz', prop.contigs = 0.1)
-paste(substr(genome_seq, 1, 10), '...', 
-      substr(genome_seq, nchar(genome_seq) - 9, nchar(genome_seq)))
-
-
-
-
-re_df <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI'),
+#' 
+#' 
+#' 
+#' # Make restriction enzyme data frame
+#' 
+#' 
+#' Here is a table of the restriction enzymes considered and their restriction-site
+#' sequences:
+#' 
+#' 
+#+ display_table, echo = FALSE
+disp_mat <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI', 'AscI', 
+                                  'BspEI', 'AclI', 'FspI', 'MluI-HF', 'NruI-HF'),
+                       sites = list(c('G', 'CAGC', 'G', 'CTGC'), c('CCTGCA', 'GG'),
+                                    c('CTGCA', 'G'), c('ATGCA', 'T'), c('TT', 'CGAA'), 
+                                    c('GG', 'CGCGCC'), c('T', 'CCGGA'), c('AA', 'CGTT'), 
+                                    c('TGC', 'GCA'), c('A', 'CGCGT'), c('TCG','CGA'))) %>%
+    mutate(sites = sapply(sites, function(s) paste0(s, collapse = ','))) %>% 
+    separate(sites, paste0('s', 1:4), fill = 'right') %>% 
+    unite('site1', s1:s2, sep = '/') %>% 
+    unite('site2', s3:s4, sep = '/') %>% 
+    mutate(site2 = ifelse(site2 == 'NA/NA', '', site2),
+           enzyme = sprintf('*%s*', enzyme))
+knitr::kable(disp_mat, format = 'markdown', row.names = FALSE, escape = TRUE, 
+             align = c('l', 'c', 'c'))
+#' 
+#' 
+#' 
+#' Below is a data frame of the above table:
+#' 
+#+ make_re_df
+re_df <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI', 'AscI', 
+                               'BspEI', 'AclI', 'FspI', 'MluI-HF', 'NruI-HF'),
                     sites = list(c('G', 'CAGC', 'G', 'CTGC'), c('CCTGCA', 'GG'),
-                                 c('CTGCA', 'G'), c('ATGCA', 'T'), 
-                                 c('TT', 'CGAA')))
-
-
+                                 c('CTGCA', 'G'), c('ATGCA', 'T'), c('TT', 'CGAA'), 
+                                 c('GG', 'CGCGCC'), c('T', 'CCGGA'), c('AA', 'CGTT'), 
+                                 c('TGC', 'GCA'), c('A', 'CGCGT'), c('TCG','CGA'))) %>% 
+    filter(!enzyme %in% c('SbfI', 'PstI', 'EcoT22I', 'AscI', 'BspEI', 'FspI'))
+#' 
+#' 
+#' 
+#' The restriction enzymes below were filtered out (reasons and link to referencing site 
+#' follow):
+#' 
+#' - *SbfI*: Not blocked by CpG methylase
+#'   ([link](https://www.neb.com/products/r0642-sbfi))
+#' - *PstI*: Not blocked by CpG methylase
+#'   ([link](https://www.neb.com/products/r0140-psti))
+#' - *EcoT22I*: "... not sensitive to dam, dcm, or CG methylation" 
+#'   ([link](https://tools.thermofisher.com/content/sfs/manuals/15240501.pdf))
+#' - *AscI*: "AscI is strongly inhibited by NaCl and ammonium acetate"
+#'   ([link](https://www.neb.com/products/r0558-asci))
+#' - *BspEI*: Only impaired by CpG methylase
+#'   ([link](https://www.neb.com/products/r0540-bspei))
+#' - *FspI*: "Ligation is 25% -75%."
+#'   ([link](https://www.neb.com/products/r0135-fspi))
+#' 
+#' 
+#' # Digest genome
+#' 
+#' This function runs an in silico digestion of the genome, given an enzyme's site 
+#' sequences as a character vector:
+#' 
+#+ digest_function
 digest_enzyme <- function(enzyme_sites, dna_seq = genome_seq) {
     if (is.list(enzyme_sites)) {
         enzyme_sites <- enzyme_sites[[1]]
+    }
+    if ((length(enzyme_sites) %% 2) != 0) {
+        stop(paste('enzyme_sites argument must be of even length, separately providing',
+                   'sequences for 5 prime and 3 prime sides of each site'))
     }
     names(enzyme_sites) <- 
         c('cut_site_5prime1', 'cut_site_3prime1', 
@@ -62,75 +130,37 @@ digest_enzyme <- function(enzyme_sites, dna_seq = genome_seq) {
 }
 
 
+
+#' 
+#' Running that on all digestion enzymes in `re_df` (takes ~30 seconds):
+#' 
+#+ run_digest
 re_df <- re_df %>% 
     mutate(digest = lapply(sites, digest_enzyme))
 
 
 
-# # Restriction enzyme: ApeKI
-# apeki_dig <- digest_enzyme(c('G', 'CAGC', 'G', 'CTGC'))
-# 
-# # SbfI
-# sbfi_dig <- digest_enzyme(c('CCTGCA', 'GG'))
-# 
-# # PstI 
-# psti_dig <- digest_enzyme(c('CTGCA', 'G'))
-# 
-# # EcoT22I 
-# ecot22i_dig <- digest_enzyme(c('ATGCA', 'T'))
-
-enz <- 'BstBI'
-dig <- digest_enzyme(c('TT', 'CGAA'))
-cat('Total loci for', enz, '=', 
-    format(seq_p * length(dig) * 10, digits = 0, big.mark = ',', scientific = FALSE))
-
-enz <- 'AscI'
-dig <- digest_enzyme(c('GG', 'CGCGCC'))
-cat('Total loci for', enz, '=', 
-    format(seq_p * length(dig) * 10, digits = 0, big.mark = ',', scientific = FALSE))
-
-enz <- 'BspEI'
-dig <- digest_enzyme(c('T', 'CCGGA'))
-cat('Total loci for', enz, '=', 
-    format(seq_p * length(dig) * 10, digits = 0, big.mark = ',', scientific = FALSE))
-
-enz <- 'AclI'
-dig <- digest_enzyme(c('AA', 'CGTT'))
-cat('Total loci for', enz, '=', 
-    format(seq_p * length(dig) * 10, digits = 0, big.mark = ',', scientific = FALSE))
-
-# enz <- 'FspI'
-# dig <- digest_enzyme(c('TGC', 'GCA'))
-# cat('Total loci for', enz, '=', 
-#     format(seq_p * length(dig) * 10, digits = 0, big.mark = ',', scientific = FALSE))
-# # Not considered because "Ligation is 25% -75%."
-
-enz <- 'MluI-HF'
-dig <- digest_enzyme(c('A', 'CGCGT'))
-cat('Total loci for', enz, '=', 
-    format(seq_p * length(dig) * 10, digits = 0, big.mark = ',', scientific = FALSE))
-
-enz <- 'NruI-HF'
-dig <- digest_enzyme(c('TCG','CGA'))
-cat('Total loci for', enz, '=', 
-    format(seq_p * length(dig) * 10, digits = 0, big.mark = ',', scientific = FALSE))
-
-
+#' 
+#' ### Accounting for missing data
 #' 
 #' > From six sequencing lanes, we identified 809,651 sequence tags (at least five times)
-#' > from one or both flanks of 654,998 of the 2.1 million ApeKI cut sites lying within
+#' > from one or both flanks of 654,998 of the 2.1 million *ApeKI* cut sites lying within
 #' > the single copy genomic fraction.
 #' 
-#' (Elshire et al. 2011, p 5)
+#' ([Elshire et al. 2011](http://dx.plos.org/10.1371/journal.pone.0019379), p 5)
 #' 
-#' Below is the proportion of cut sites that get sequenced:
+#' From above, I'm creating an object storing the proportion of cut sites that 
+#' I'll assume get sequenced:
 #' 
-
+#+ make_seq_p
 seq_p <- 654998 / 2.1e6
 
 
-#'
-#'  Printing summary of each digestion:
+#' 
+#' ### Digestion summary
+#' 
+#' Printing summary of each digestion, where all numbers assume `seq_p` proportion of
+#' sites get sequenced:
 #'  
 #+ dig_summary, echo = FALSE
 z <- apply(re_df, 1, 
@@ -148,70 +178,104 @@ z <- apply(re_df, 1,
            }); rm(z)
 
 
+#' 
+#' 
+#' # Choosing enzymes and visualizing fragment sizes
+#' 
+#' 
+#' From the summary above, I'll use *ApeKI* as a common restriction enzyme, 
+#' *MluI-HF* as intermediate, and
+#' *NruI-HF* as rare.
+#' 
+#+ make_chosen_res
+chosen_res <- c(ApeKI = 'ApeKI', MluI_HF = 'MluI-HF', NruI_HF = 'NruI-HF')
+#' 
+#' Below are histograms of the fragment sizes for the genome digested with each enzyme.
+#' 
+#+ plot_frag_sizes, echo = FALSE
+plot_df <- re_df %>% 
+    filter(enzyme %in% chosen_res) %>% 
+    split(.$enzyme) %>% 
+    map_df(~ data_frame(enzyme = .x$enzyme, frag_len = nchar(.x$digest[[1]]))) %>% 
+    mutate(enzyme = factor(enzyme))
+plot_df %>% 
+    ggplot(aes(frag_len / 1e3)) +
+    theme_classic() +
+    theme(strip.background = element_blank(), 
+          strip.text = element_text(size = 14, face = 'bold.italic')) +
+    geom_histogram(aes(y = ..density.., fill = enzyme), bins = 100) +
+    # geom_density(color = 'red') +
+    # geom_line(data = plot_df %>% filter(enzyme == 'ApeKI'),
+    #           aes(y = dnbinom(frag_len, size = 5.825080e-01, mu = 1.722693e+03))) +
+    # geom_line(data = plot_df %>% filter(enzyme == 'MluI-HF'),
+    #           aes(y = dnbinom(frag_len, size = 6.738870e-01, mu = 6.247840e+03))) +
+    # geom_line(data = plot_df %>% filter(enzyme == 'NruI-HF'),
+    #           aes(y = dnbinom(frag_len, size = 6.374239e-01, mu = 1.337766e+04))) +
+    facet_grid(enzyme ~ ., scales = 'free') +
+    ylab('Density') +
+    scale_x_log10('Fragment length (Kbp)', breaks = c(0.1, 1, 10, 50)) +
+    scale_fill_manual(values = c('#66c2a5','#fc8d62','#8da0cb'), guide = FALSE)
 
 
 
 #' 
-#' Used WebPlotDigitizer (arohatgi.info/WebPlotDigitizer/) to extract data from Figure 3 
-#' in Elshire et al. (2011).
+#' <!--- Not needed right now
+#'
+#' fits <- lapply(as.list(chosen_res), 
+#'             function(e) {
+#'                 z <- lapply(c(poiss = 'Poisson', lnorm = 'log-normal', 
+#'                               nbin = 'negative binomial'), 
+#'                             function(m) {
+#'                                 fitdistr(filter(plot_df, enzyme == e)$frag_len, m)
+#'                             })
+#'                 ll <- map_dbl(z, ~ .x$loglik)
+#'                 z %>% keep(~.x$loglik == max(ll))
+#'             })
+#' 
+#' fits
+#' 
+#' -->
 #' 
 
-rounded_p <- function(vec, round_digits = 4) {
-    new_vec <- round(vec / sum(vec), round_digits)
-    if (sum(new_vec) != 1) {
-        newish_vec <- vec / sum(vec)
-        diffs <- (newish_vec - new_vec) * 10^round_digits
-        ind <- which(diffs == ifelse(sum(new_vec) < 1, min(diffs), max(diffs)))
-        new_vec[ind] <- new_vec[ind] + (1 - sum(new_vec))
-    }
-    return(new_vec)
+
+
+
+#' 
+#' # Writing to fasta files
+#' 
+#' The `DNAStringSet` function is from the `Biostrings` package, and `writeFasta` is
+#' from the `ShortRead` package. Both of these packages should already be loaded from
+#' by `SimRAD`.
+#' 
+#' The below code makes a list of DNAStringSet objects with individual sequence names 
+#' set to `seq_X`, where `X` goes from 1 to the number of sequences.
+#' 
+#+ make_write_list
+write_list <- re_df %>% 
+    filter(enzyme %in% chosen_res) %>% 
+    split(.$enzyme) %>% 
+    map(~ DNAStringSet(.x$digest[[1]])) %>% 
+    map(~ magrittr::set_names(.x, paste0('seq_', 1:length(.x))))
+write_list
+
+#' 
+#' Now I write each DNAStringSet object to a fasta file:
+#' 
+#+ write_fastas, eval = FALSE
+for (enz in names(write_list)) {
+    writeFasta(write_list[[enz]], file = sprintf('frags_%s.fa.gz', enz), mode = 'w',
+               compress = 'gzip')
 }
 
-frag_sizes <- read_csv('frag_sizes.csv', col_types = 'cd') %>% 
-    mutate(size = as.integer(rep(seq(50, 1000, 50), each = 2)),
-           type = rep(c('predicted', 'actual'), 1000 / 50)) %>% 
-    select(size, type, prop) %>% 
-    group_by(type) %>%
-    mutate(prop = rounded_p(prop)) %>%
-    ungroup
-
-
-frag_sizes %>% 
-    ggplot(aes(size, prop)) + 
-    geom_bar(aes(fill = type), stat = 'identity', position = 'dodge') +
-    theme_classic()
-
-frag_sizes %>% 
-    filter(type == 'actual') %>% 
-    ggplot(aes(size, prop)) + 
-    geom_bar(stat = 'identity', position = 'dodge', fill = 'dodgerblue') +
-    theme_classic()
-
-
-# To fit distribution to censored data:
-# ?fitdistcens
-# https://cran.r-project.org/web/packages/fitdistrplus/fitdistrplus.pdf
-
-
-
-frag_sizes %>% 
-    filter(type == 'actual') %>% 
-    mutate(size = ifelse(size == 1000, NA, size))
-
-
-
-
 
 
 #' 
 #' 
-#' # References
-#' 
-#' Elshire, R. J., J. C. Glaubitz, Q. Sun, J. A. Poland, K. Kawamoto, E. S. Buckler, 
-#' and S. E. Mitchell. 2011. A robust, simple genotyping-by-sequencing (GBS) approach 
-#' for high diversity species. *PLOS ONE* __6__:e19379.
+#' # Session info and package versions
 #' 
 #' 
+#+ session_info, echo = FALSE
+devtools::session_info()
 
 
 
