@@ -13,10 +13,11 @@ Loading packages:
 ``` r
 suppressPackageStartupMessages(
     suppressWarnings({
-        library(MASS)
         library(SimRAD)
-        library(tidyverse)
-        library(fitdistrplus)
+        library(dplyr)
+        library(purrr)
+        library(tidyr)
+        library(ggplot2)
     })
 )
 ```
@@ -79,7 +80,7 @@ The restriction enzymes below were filtered out (reasons and link to referencing
 -   *EcoT22I*: "... not sensitive to dam, dcm, or CG methylation" ([link](https://tools.thermofisher.com/content/sfs/manuals/15240501.pdf))
 -   *AscI*: "AscI is strongly inhibited by NaCl and ammonium acetate" ([link](https://www.neb.com/products/r0558-asci))
 -   *BspEI*: Only impaired by CpG methylase ([link](https://www.neb.com/products/r0540-bspei))
--   *FspI*: "Ligation is 25% -75%." ([link](https://www.neb.com/products/r0135-fspi))
+-   *FspI*: "Ligation is 25%–75%." ([link](https://www.neb.com/products/r0135-fspi))
 
 Digest genome
 =============
@@ -158,29 +159,13 @@ Choosing enzymes and visualizing fragment sizes
 From the summary above, I'll use *ApeKI* as a common restriction enzyme, *MluI-HF* as intermediate, and *NruI-HF* as rare.
 
 ``` r
-chosen_res <- c(ApeKI = 'ApeKI', MluI_HF = 'MluI-HF', NruI_HF = 'NruI-HF')
+chosen_res <- c('ApeKI', 'MluI-HF', 'NruI-HF')
 ```
 
 Below are histograms of the fragment sizes for the genome digested with each enzyme.
 
 ![](digest_genome_files/figure-markdown_github/plot_frag_sizes-1.png)
 
-<!--- Not needed right now
-
-fits <- lapply(as.list(chosen_res), 
-            function(e) {
-                z <- lapply(c(poiss = 'Poisson', lnorm = 'log-normal', 
-                              nbin = 'negative binomial'), 
-                            function(m) {
-                                fitdistr(filter(plot_df, enzyme == e)$frag_len, m)
-                            })
-                ll <- map_dbl(z, ~ .x$loglik)
-                z %>% keep(~.x$loglik == max(ll))
-            })
-
-fits
-
--->
 Writing to fasta files
 ======================
 
@@ -242,10 +227,10 @@ write_list
     ## [4051]  22440 CGATCGTTTACCGATCGGT...TCGAAAACGCGATAGTCG seq_4051
     ## [4052]   9275 CGAAAAAAATCGAACGTCC...TGGGATGAGGGATGTCAT seq_4052
 
-Now I write each DNAStringSet object to a fasta file:
+Now I write each `DNAStringSet` object to a fasta file:
 
 ``` r
-for (enz in names(write_list)) {
+for (enz in chosen_res) {
     writeFasta(write_list[[enz]], file = sprintf('frags_%s.fa.gz', enz), mode = 'w',
                compress = 'gzip')
 }
@@ -275,57 +260,40 @@ Session info and package versions
     ##  BiocParallel         * 1.8.1    2016-10-30 Bioconductor  
     ##  Biostrings           * 2.42.1   2016-12-01 Bioconductor  
     ##  bitops                 1.0-6    2013-08-17 CRAN (R 3.3.0)
-    ##  broom                  0.4.2    2017-02-13 CRAN (R 3.3.2)
     ##  colorspace             1.3-2    2016-12-14 CRAN (R 3.3.2)
     ##  DBI                    0.6      2017-03-09 CRAN (R 3.3.2)
     ##  devtools               1.12.0   2016-06-24 CRAN (R 3.3.0)
     ##  digest                 0.6.12   2017-01-27 CRAN (R 3.3.2)
     ##  dplyr                * 0.5.0    2016-06-24 CRAN (R 3.3.0)
     ##  evaluate               0.10     2016-10-11 CRAN (R 3.3.0)
-    ##  fitdistrplus         * 1.0-8    2017-02-01 CRAN (R 3.3.2)
-    ##  forcats                0.2.0    2017-01-23 CRAN (R 3.3.2)
-    ##  foreign                0.8-67   2016-09-13 CRAN (R 3.3.2)
     ##  GenomeInfoDb         * 1.10.3   2017-02-07 Bioconductor  
     ##  GenomicAlignments    * 1.10.1   2017-03-18 Bioconductor  
     ##  GenomicRanges        * 1.26.4   2017-03-18 Bioconductor  
     ##  ggplot2              * 2.2.1    2016-12-30 CRAN (R 3.3.2)
     ##  gtable                 0.2.0    2016-02-26 CRAN (R 3.3.0)
-    ##  haven                  1.0.0    2016-09-23 CRAN (R 3.3.0)
     ##  highr                  0.6      2016-05-09 CRAN (R 3.3.0)
-    ##  hms                    0.3      2016-11-22 CRAN (R 3.3.2)
     ##  htmltools              0.3.5    2016-03-21 CRAN (R 3.3.0)
-    ##  httr                   1.2.1    2016-07-03 CRAN (R 3.3.0)
     ##  hwriter                1.3.2    2014-09-10 CRAN (R 3.3.0)
     ##  IRanges              * 2.8.2    2017-03-18 Bioconductor  
-    ##  jsonlite               1.3      2017-02-28 CRAN (R 3.3.2)
     ##  knitr                  1.15.1   2016-11-22 CRAN (R 3.3.2)
     ##  labeling               0.3      2014-08-23 CRAN (R 3.3.0)
     ##  lattice                0.20-34  2016-09-06 CRAN (R 3.3.2)
     ##  latticeExtra           0.6-28   2016-02-09 CRAN (R 3.3.0)
     ##  lazyeval               0.2.0    2016-06-12 CRAN (R 3.3.0)
-    ##  lubridate              1.6.0    2016-09-13 CRAN (R 3.3.0)
     ##  magrittr               1.5      2014-11-22 CRAN (R 3.3.0)
-    ##  MASS                 * 7.3-45   2016-04-21 CRAN (R 3.3.2)
     ##  Matrix                 1.2-8    2017-01-20 CRAN (R 3.3.2)
     ##  memoise                1.0.0    2016-01-29 CRAN (R 3.3.0)
-    ##  mnormt                 1.5-5    2016-10-15 CRAN (R 3.3.0)
-    ##  modelr                 0.1.0    2016-08-31 CRAN (R 3.3.0)
     ##  munsell                0.4.3    2016-02-13 CRAN (R 3.3.0)
-    ##  nlme                   3.1-131  2017-02-06 CRAN (R 3.3.2)
     ##  plyr                   1.8.4    2016-06-08 CRAN (R 3.3.0)
-    ##  psych                  1.6.12   2017-01-08 CRAN (R 3.3.2)
     ##  purrr                * 0.2.2    2016-06-18 CRAN (R 3.3.0)
     ##  R6                     2.2.0    2016-10-05 CRAN (R 3.3.0)
     ##  RColorBrewer           1.1-2    2014-12-07 CRAN (R 3.3.0)
     ##  Rcpp                   0.12.10  2017-03-19 CRAN (R 3.3.2)
     ##  RCurl                  1.95-4.8 2016-03-01 CRAN (R 3.3.0)
-    ##  readr                * 1.0.0    2016-08-03 CRAN (R 3.3.0)
-    ##  readxl                 0.1.1    2016-03-28 CRAN (R 3.3.0)
     ##  reshape2               1.4.2    2016-10-22 CRAN (R 3.3.0)
     ##  rmarkdown              1.3      2016-12-21 CRAN (R 3.3.2)
     ##  rprojroot              1.2      2017-01-16 CRAN (R 3.3.2)
     ##  Rsamtools            * 1.26.1   2016-10-22 Bioconductor  
-    ##  rvest                  0.3.2    2016-06-17 CRAN (R 3.3.0)
     ##  S4Vectors            * 0.12.2   2017-03-18 Bioconductor  
     ##  scales                 0.4.1    2016-11-09 CRAN (R 3.3.2)
     ##  ShortRead            * 1.32.1   2017-03-18 Bioconductor  
@@ -333,12 +301,9 @@ Session info and package versions
     ##  stringi                1.1.2    2016-10-01 CRAN (R 3.3.0)
     ##  stringr                1.2.0    2017-02-18 CRAN (R 3.3.2)
     ##  SummarizedExperiment * 1.4.0    2016-10-18 Bioconductor  
-    ##  survival             * 2.41-2   2017-03-16 CRAN (R 3.3.2)
-    ##  tibble               * 1.2      2016-08-26 CRAN (R 3.3.0)
+    ##  tibble                 1.2      2016-08-26 CRAN (R 3.3.0)
     ##  tidyr                * 0.6.1    2017-01-10 CRAN (R 3.3.2)
-    ##  tidyverse            * 1.1.1    2017-01-27 CRAN (R 3.3.2)
     ##  withr                  1.0.2    2016-06-20 CRAN (R 3.3.0)
-    ##  xml2                   1.1.1    2017-01-24 CRAN (R 3.3.2)
     ##  XVector              * 0.14.1   2017-03-18 Bioconductor  
     ##  yaml                   2.1.14   2016-11-12 CRAN (R 3.3.2)
     ##  zlibbioc             * 1.20.0   2016-10-18 Bioconductor

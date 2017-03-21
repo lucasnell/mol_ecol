@@ -18,10 +18,11 @@
 #+ packages
 suppressPackageStartupMessages(
     suppressWarnings({
-        library(MASS)
         library(SimRAD)
-        library(tidyverse)
-        library(fitdistrplus)
+        library(dplyr)
+        library(purrr)
+        library(tidyr)
+        library(ggplot2)
     })
 )
 #' 
@@ -98,7 +99,7 @@ re_df <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI', 'Asc
 #'   ([link](https://www.neb.com/products/r0558-asci))
 #' - *BspEI*: Only impaired by CpG methylase
 #'   ([link](https://www.neb.com/products/r0540-bspei))
-#' - *FspI*: "Ligation is 25% -75%."
+#' - *FspI*: "Ligation is 25%–75%."
 #'   ([link](https://www.neb.com/products/r0135-fspi))
 #' 
 #' 
@@ -188,7 +189,7 @@ z <- apply(re_df, 1,
 #' *NruI-HF* as rare.
 #' 
 #+ make_chosen_res
-chosen_res <- c(ApeKI = 'ApeKI', MluI_HF = 'MluI-HF', NruI_HF = 'NruI-HF')
+chosen_res <- c('ApeKI', 'MluI-HF', 'NruI-HF')
 #' 
 #' Below are histograms of the fragment sizes for the genome digested with each enzyme.
 #' 
@@ -204,42 +205,14 @@ plot_df %>%
     theme(strip.background = element_blank(), 
           strip.text = element_text(size = 14, face = 'bold.italic')) +
     geom_histogram(aes(y = ..density.., fill = enzyme), bins = 100) +
-    # geom_density(color = 'red') +
-    # geom_line(data = plot_df %>% filter(enzyme == 'ApeKI'),
-    #           aes(y = dnbinom(frag_len, size = 5.825080e-01, mu = 1.722693e+03))) +
-    # geom_line(data = plot_df %>% filter(enzyme == 'MluI-HF'),
-    #           aes(y = dnbinom(frag_len, size = 6.738870e-01, mu = 6.247840e+03))) +
-    # geom_line(data = plot_df %>% filter(enzyme == 'NruI-HF'),
-    #           aes(y = dnbinom(frag_len, size = 6.374239e-01, mu = 1.337766e+04))) +
     facet_grid(enzyme ~ ., scales = 'free') +
     ylab('Density') +
     scale_x_log10('Fragment length (Kbp)', breaks = c(0.1, 1, 10, 50)) +
     scale_fill_manual(values = c('#66c2a5','#fc8d62','#8da0cb'), guide = FALSE)
-
-
-
 #' 
-#' <!--- Not needed right now
-#'
-#' fits <- lapply(as.list(chosen_res), 
-#'             function(e) {
-#'                 z <- lapply(c(poiss = 'Poisson', lnorm = 'log-normal', 
-#'                               nbin = 'negative binomial'), 
-#'                             function(m) {
-#'                                 fitdistr(filter(plot_df, enzyme == e)$frag_len, m)
-#'                             })
-#'                 ll <- map_dbl(z, ~ .x$loglik)
-#'                 z %>% keep(~.x$loglik == max(ll))
-#'             })
 #' 
-#' fits
 #' 
-#' -->
 #' 
-
-
-
-
 #' 
 #' # Writing to fasta files
 #' 
@@ -259,10 +232,10 @@ write_list <- re_df %>%
 write_list
 
 #' 
-#' Now I write each DNAStringSet object to a fasta file:
+#' Now I write each `DNAStringSet` object to a fasta file:
 #' 
 #+ write_fastas, eval = FALSE
-for (enz in names(write_list)) {
+for (enz in chosen_res) {
     writeFasta(write_list[[enz]], file = sprintf('frags_%s.fa.gz', enz), mode = 'w',
                compress = 'gzip')
 }
