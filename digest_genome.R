@@ -13,7 +13,7 @@
 #' Once enzymes are chosen, I write the resulting fragments to fasta files.
 #' 
 #' 
-#' ## Loading packages:
+#' __Loading packages:__
 #' 
 #+ packages
 suppressPackageStartupMessages(
@@ -220,7 +220,7 @@ plot_df %>%
 #' from the `ShortRead` package. Both of these packages should already be loaded from
 #' by `SimRAD`.
 #' 
-#' The below code makes a list of DNAStringSet objects with individual sequence names 
+#' The below code makes a list of `DNAStringSet` objects with individual sequence names 
 #' set to `seq_X`, where `X` goes from 1 to the number of sequences.
 #' 
 #+ make_write_list
@@ -232,7 +232,7 @@ write_list <- re_df %>%
 write_list
 
 #' 
-#' Now I write each `DNAStringSet` object to a fasta file:
+#' Now I write each `DNAStringSet` object to a compressed fasta file:
 #' 
 #+ write_fastas, eval = FALSE
 for (enz in chosen_res) {

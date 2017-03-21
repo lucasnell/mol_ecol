@@ -3,12 +3,20 @@ Digest genome
 Lucas Nell
 19 March 2017
 
+-   [Make subset of genome](#make-subset-of-genome)
+-   [Make restriction enzyme data frame](#make-restriction-enzyme-data-frame)
+-   [Digest genome](#digest-genome)
+    -   [Accounting for missing data](#accounting-for-missing-data)
+    -   [Digestion summary](#digestion-summary)
+-   [Choosing enzymes and visualizing fragment sizes](#choosing-enzymes-and-visualizing-fragment-sizes)
+-   [Writing to fasta files](#writing-to-fasta-files)
+-   [Session info and package versions](#session-info-and-package-versions)
+
 *Updated 21 March 2017*
 
 In this script I perform in silico digestions of the aphid genome using multiple restriction enzymes. Once enzymes are chosen, I write the resulting fragments to fasta files.
 
-Loading packages:
------------------
+**Loading packages:**
 
 ``` r
 suppressPackageStartupMessages(
@@ -171,7 +179,7 @@ Writing to fasta files
 
 The `DNAStringSet` function is from the `Biostrings` package, and `writeFasta` is from the `ShortRead` package. Both of these packages should already be loaded from by `SimRAD`.
 
-The below code makes a list of DNAStringSet objects with individual sequence names set to `seq_X`, where `X` goes from 1 to the number of sequences.
+The below code makes a list of `DNAStringSet` objects with individual sequence names set to `seq_X`, where `X` goes from 1 to the number of sequences.
 
 ``` r
 write_list <- re_df %>% 
@@ -227,7 +235,7 @@ write_list
     ## [4051]  22440 CGATCGTTTACCGATCGGT...TCGAAAACGCGATAGTCG seq_4051
     ## [4052]   9275 CGAAAAAAATCGAACGTCC...TGGGATGAGGGATGTCAT seq_4052
 
-Now I write each `DNAStringSet` object to a fasta file:
+Now I write each `DNAStringSet` object to a compressed fasta file:
 
 ``` r
 for (enz in chosen_res) {
