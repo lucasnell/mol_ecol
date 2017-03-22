@@ -258,20 +258,92 @@ dig_frags <- lapply(setNames(chosen_res, chosen_res), function(enz) {
 
 dig_frag_sizes <- lapply(dig_frags, width)
 
-dig_frag_df <- data_frame(frag_len = dig_frag_sizes[['ApeKI']]) %>% 
-    mutate(prop = act_prop(frag_len))
+dig_frag_df <- lapply(chosen_res, 
+                      function(re){
+                          data_frame(frag_len = dig_frag_sizes[[re]]) %>% 
+                              mutate(prop = act_prop(frag_len), enzyme = re)
+                      }) %>% 
+    bind_rows
+
+do.call(dnbinom, as.list(c(coef(actual_fit), x = 10)))
+dnbinom(10, size = coef(actual_fit)[['size']], 
+        prob = (coef(actual_fit)[['size']] / {coef(actual_fit)[['mu']] + coef(actual_fit)[['size']]}))
+dnbinom(10, size = coef(actual_fit)[['size']], 
+        prob = (coef(actual_fit)[['size']] / {coef(actual_fit)[['mu']] + coef(actual_fit)[['size']]}))
+# dlnorm(1e4, meanlog = 4.7235121, sdlog = 0.6949672)
 
 
+
+differ_curves <- function(par_name, par_vec, p_cols = c('#e41a1c','#377eb8','#4daf4a',
+                                                        '#984ea3','#ff7f00')) {
+    if(length(par_vec) != length(p_cols)) stop('par_vec must be same length as p_cols')
+    curve(dnbinom(x, size = coef(actual_fit)[['size']], mu = coef(actual_fit)[['mu']]), 
+          1, 1000, n = 1000, ylab = 'density', main = par_name)
+    if (par_name == 'mu') {
+        for (z in 1:length(par_vec)){
+            curve(dnbinom(x, size = coef(actual_fit)[['size']], 
+                          mu = coef(actual_fit)[['mu']] + par_vec[z]),
+                  1, 1000, n = 1000, add = TRUE, col = p_cols[z])
+        }
+    } else if (par_name == 'size') {
+        for (z in 1:length(par_vec)){
+            curve(dnbinom(x, size = coef(actual_fit)[['size']] + par_vec[z], 
+                          mu = coef(actual_fit)[['mu']]),
+                  1, 1000, n = 1000, add = TRUE, col = p_cols[z])
+        }
+    } else {
+        for (z in 1:length(par_vec)){
+            curve(dnbinom(x, size = coef(actual_fit)[['size']], 
+                          prob = (coef(actual_fit)[['size']] / {coef(actual_fit)[['mu']] +
+                                  coef(actual_fit)[['size']]}) + par_vec[z]),
+                  1, 1000, n = 1000, add = TRUE, col = p_cols[z])
+        }
+    }
+}
+
+par(mfrow = c(3, 1))
+differ_curves('size', 1:5*1)
+differ_curves('mu', 1:5*20)
+differ_curves('prob', -1:-5*0.001)
+par(mfrow = c(1,1))
+
+
+enz <- chosen_res[2]
 dig_frag_df %>% 
+    filter(enzyme == enz) %>% 
     sample_frac(seq_p, weight = prop) %T>%
     {N <<- nrow(.); .} %>%
     ggplot(aes(frag_len)) +
     geom_histogram(aes(y = ..density..), binwidth = 50, fill = 'dodgerblue') +
-    annotate('text', x = 400, y = 0.002,
-             label = sprintf('paste(italic(p) == %.4f)', N / nrow(sim_frags)),
-             parse = TRUE) +
+    # annotate('text', x = 400, y = 0.002,
+    #          label = sprintf('paste(italic(p) == %.4f)', 
+    #                          N / nrow(filter(dig_frag_df, enzyme == enz))),
+    #          parse = TRUE) +
     # coord_cartesian(xlim = c(0, 1000)) +
     theme_classic()
 
 
+
+
+.test <- filter(dig_frag_df, enzyme == 'ApeKI')
+
+filt_frags <- function(props, multiplier = 6e2) {
+    .keep <- sapply(props * multiplier, function(p) rbinom(1, 1, prob = min(c(1, p))))
+    return(.keep == 1)
+}
+
+
+data_frame(size = .test$frag_len[filt_frags(.test$prop)]) %>% 
+    ggplot() +
+    theme_classic() +
+    geom_histogram(aes(size, ..density..), binwidth = 50, fill = 'dodgerblue', 
+                   closed = 'left', center = 25) +
+    geom_line(data = data_frame(size = 1:750, prop = act_prop(size)) %>% 
+                  mutate(prop = 0.0055 * prop / max(prop)),
+              aes(size, prop), size = 0.75)
+
+
+
+
+rm(.test)
 
