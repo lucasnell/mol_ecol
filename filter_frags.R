@@ -7,7 +7,26 @@
 #' 
 #' *Updated `r format(Sys.Date(), '%d %B %Y')`*
 #' 
-
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' __Loading packages:__
+#' 
+#+ packages
+suppressPackageStartupMessages(
+    suppressWarnings({
+        library(fitdistrplus)
+        library(purrr)
+        library(readr)
+        library(ggplot2)
+        library(dplyr)
+        library(magrittr)
+        library(ShortRead)
+    }))
 
 #' 
 #' > From six sequencing lanes, we identified 809,651 sequence tags (at least five times)
@@ -53,36 +72,206 @@ frag_sizes <- read_csv('frag_sizes.csv', col_types = 'cd') %>%
 frag_sizes %>% 
     ggplot(aes(size, prop)) + 
     geom_bar(aes(fill = type), stat = 'identity', position = 'dodge') +
-    theme_classic()
+    theme_classic() +
+    scale_fill_manual(values = c('dodgerblue', 'red'))
+
+# Data frame incorporating censoring
+cens_df <- frag_sizes %>% 
+    split(interaction(.$size, .$type)) %>% 
+    map_df(
+        function(.x) {
+            .left <- .x$size - 49
+            .right <- ifelse(.x$size == 1000, NA, .x$size)
+            .type = .x$type
+            N <- round(.x$prop * 1e4, 0)
+            data_frame(type = rep(.type, N), 
+                       left = rep(.left, N),  right = rep(.right, N))
+        }
+    )
+
+
+actual_fit <- cens_df %>% 
+    filter(type == 'actual') %>% 
+    select(-type) %>% 
+    as.data.frame %>% 
+    # fitdistcens('lnorm')
+    fitdistcens('nbinom')
+actual_fit %>% summary
+
+
+
+
+
+predicted_fit <- cens_df %>% 
+    filter(type == 'predicted') %>% 
+    select(-type) %>% 
+    as.data.frame %>% 
+    # fitdistcens('lnorm')
+    fitdistcens('nbinom')
+predicted_fit %>% summary
+
+
+
+act_prop <- function(sizes) {
+    dnbinom(sizes, size = coef(actual_fit)[['size']], 
+            mu = coef(actual_fit)[['mu']])
+}
+
+pred_prop <- function(sizes) {
+    dnbinom(sizes, size = coef(predicted_fit)[['size']], 
+            mu = coef(predicted_fit)[['mu']])
+}
+
+
+
+bin_prop <- function(sizes, bin_size = 50, last_max = 951, distr = 'actual') {
+    
+    distr_coefs <- coef(get(paste0(distr, '_fit')))
+    
+    size_lims <- cbind(mins = seq(1, last_max, bin_size), 
+                       maxes = c(seq(bin_size, last_max - 1, bin_size), Inf))
+    
+    size_inds <- sapply(
+        sizes,
+        function(s) {
+            which(size_lims[,1] <= s & size_lims[,2] >= s)
+        }
+    )
+    
+    size_lims <- tryCatch(
+        size_lims[size_inds,], 
+        error = function(e) {
+            if (grepl('invalid subscript', e)) {
+                stop(paste('You probably have zeros in your data. Since having 0-length', 
+                     'fragments makes no sense, I have not allowed for that here.'))
+            } else stop(e)
+        }
+    )
+    
+    bin_prop_vec <- apply(size_lims, 1, 
+                       function(r) {
+                           .under <- pnbinom(r[1] - 1, size = distr_coefs[['size']], 
+                                             mu = distr_coefs[['mu']], lower.tail = TRUE)
+                           .over <- pnbinom(r[2], size = distr_coefs[['size']], 
+                                            mu = distr_coefs[['mu']], lower.tail = FALSE)
+                           return(1 - .over - .under)
+                       })
+    
+    return(bin_prop_vec)
+}
+
+
+
 
 frag_sizes %>% 
     filter(type == 'actual') %>% 
-    ggplot(aes(size, prop)) + 
-    geom_bar(stat = 'identity', position = 'dodge', fill = 'dodgerblue') +
-    theme_classic()
-
-
-# To fit distribution to censored data:
-# ?fitdistcens
-# https://cran.r-project.org/web/packages/fitdistrplus/fitdistrplus.pdf
-
+    ggplot(aes(y = prop)) + 
+    geom_bar(aes(size - 25), stat = 'identity', position = 'dodge', 
+             fill = 'dodgerblue') +
+    theme_classic() + 
+    geom_line(data = data_frame(size = 1:1000, prop = act_prop(size)) %>% 
+                  mutate(prop = max(frag_sizes$prop) * prop / max(prop)),
+              aes(size), size = 0.75) +
+    ylab('Proportion of total fragments') +
+    xlab('Fragment size (bp)')
 
 
 frag_sizes %>% 
-    filter(type == 'actual') %>% 
-    mutate(size = ifelse(size == 1000, NA, size))
+    filter(type == 'predicted') %>% 
+    ggplot(aes(y = prop)) + 
+    geom_bar(aes(size - 25), stat = 'identity', position = 'dodge', 
+             fill = 'red') +
+    theme_classic() + 
+    geom_line(data = data_frame(size = 1:1000, prop = pred_prop(size)) %>% 
+                  mutate(prop = max(frag_sizes$prop[frag_sizes$type == 'predicted']) *
+                             prop / max(prop)),
+              aes(size), size = 0.75) +
+    ylab('Proportion of total fragments') +
+    xlab('Fragment size (bp)')
+
+
+
+# Comparing distributions:
+data_frame(x = 1:1000) %>% 
+    ggplot(aes(x)) +
+    theme_classic() +
+    geom_line(aes(y = act_prop(x)), color = 'dodgerblue', size = 0.75) +
+    geom_line(aes(y = pred_prop(x)), color = 'red', size = 0.75) +
+    xlab('Fragment length (bp)') +
+    ylab('Density')
+
+
+
+sim_frags <- data_frame(frag_len = rnbinom(3e4L, size = coef(predicted_fit)[['size']], 
+                                           mu = coef(predicted_fit)[['mu']])) %>% 
+    mutate(
+        frag_len = ifelse(frag_len == 0, 1, frag_len),
+        prop = bin_prop(frag_len),
+        id = paste0('f_', 1:length(frag_len))) %>% 
+    group_by(prop) %>% 
+    mutate(keep = rbinom(n(), 1, p = prop)) %>% 
+    ungroup
+
+
+sim_frags %>% 
+    filter(keep == 1) %T>% 
+    {N <<- nrow(.); .} %>% 
+    ggplot(aes(frag_len)) +
+    theme_classic() +
+    geom_histogram(aes(y = ..density..), binwidth = 50, fill = 'dodgerblue') +
+    annotate('text', x = 400, y = 0.002, 
+             label = sprintf('paste(italic(p) == %.4f)', N / nrow(sim_frags)), 
+             parse = TRUE) +
+    coord_cartesian(xlim = c(0, 1000))
+
+
+
+# sim_frags %>% 
+#     ggplot(aes(factor(keep, levels = 0:1, labels = c('No', 'Yes')), frag_len)) +
+#     geom_point(position = position_jitter(0.2, 0), alpha = 0.2) +
+#     theme_classic() +
+#     scale_y_continuous('Fragment length (bp)') +
+#     scale_x_discrete('Kept in simulation?')
 
 
 
 
+# =======================================================================================
+# =======================================================================================
+# =======================================================================================
+# =======================================================================================
+
+#           Reading in fragments
+
+# =======================================================================================
+# =======================================================================================
+# =======================================================================================
+# =======================================================================================
 
 
-#' 
-#' 
-#' # References
-#' 
-#' Elshire, R. J., J. C. Glaubitz, Q. Sun, J. A. Poland, K. Kawamoto, E. S. Buckler, 
-#' and S. E. Mitchell. 2011. A robust, simple genotyping-by-sequencing (GBS) approach 
-#' for high diversity species. *PLOS ONE* __6__:e19379.
-#' 
-#' 
+chosen_res <- c('ApeKI', 'MluI-HF', 'NruI-HF')
+
+dig_frags <- lapply(setNames(chosen_res, chosen_res), function(enz) {
+    fasta <- readFasta(sprintf('frags_%s.fa.gz', enz))
+    sread(fasta)
+})
+
+dig_frag_sizes <- lapply(dig_frags, width)
+
+dig_frag_df <- data_frame(frag_len = dig_frag_sizes[['ApeKI']]) %>% 
+    mutate(prop = act_prop(frag_len))
+
+
+dig_frag_df %>% 
+    sample_frac(seq_p, weight = prop) %T>%
+    {N <<- nrow(.); .} %>%
+    ggplot(aes(frag_len)) +
+    geom_histogram(aes(y = ..density..), binwidth = 50, fill = 'dodgerblue') +
+    annotate('text', x = 400, y = 0.002,
+             label = sprintf('paste(italic(p) == %.4f)', N / nrow(sim_frags)),
+             parse = TRUE) +
+    # coord_cartesian(xlim = c(0, 1000)) +
+    theme_classic()
+
+
+
