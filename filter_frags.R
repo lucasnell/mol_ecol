@@ -249,7 +249,7 @@ sim_frags %>%
 # =======================================================================================
 
 
-chosen_res <- c('ApeKI', 'MluI-HF', 'NruI-HF')
+chosen_res <- c('ApeKI', 'BstBI', 'NruI-HF')
 
 dig_frags <- lapply(setNames(chosen_res, chosen_res), function(enz) {
     fasta <- readFasta(sprintf('frags_%s.fa.gz', enz))
@@ -332,7 +332,13 @@ filt_frags <- function(props, multiplier = 6e2) {
     return(.keep == 1)
 }
 
+# Testing multipliers:
+mean(filt_frags(.test$prop, 6e2))
 
+
+
+
+# Visualizing output:
 data_frame(size = .test$frag_len[filt_frags(.test$prop)]) %>% 
     ggplot() +
     theme_classic() +
@@ -341,6 +347,7 @@ data_frame(size = .test$frag_len[filt_frags(.test$prop)]) %>%
     geom_line(data = data_frame(size = 1:750, prop = act_prop(size)) %>% 
                   mutate(prop = 0.0055 * prop / max(prop)),
               aes(size, prop), size = 0.75)
+
 
 
 

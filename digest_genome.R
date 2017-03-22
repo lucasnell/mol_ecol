@@ -37,15 +37,22 @@ suppressPackageStartupMessages(
 #' ```
 #' 
 #' 
-#' # Make subset of genome
+#' # Read genome
 #' 
 #' This converts the compressed fasta file of the aphid genome to a single string
-#' containing a random 10% of the sequences in the file.
+#' containing the sequences in the file. (It should take ~20 seconds.)
 #' 
 #+ make_genome
-set.seed(699)
-genome_seq <- ref.DNAseq('aphid_genome.fa.gz', prop.contigs = 0.1)
+genome_seq <- ref.DNAseq('aphid_genome.fa.gz', subselect.contigs = FALSE)
 #' 
+#' 
+#' If you want to test this script without using as much RAM or time, you can run the
+#' following code instead:
+#' 
+#' ```{r, eval = FALSE}
+#' set.seed(1)
+#' genome_seq <- ref.DNAseq('aphid_genome.fa.gz', prop.contigs = 0.1)
+#' ```
 #' 
 #' 
 #' # Make restriction enzyme data frame
@@ -133,13 +140,12 @@ digest_enzyme <- function(enzyme_sites, dna_seq = genome_seq) {
 
 
 #' 
-#' Running that on all digestion enzymes in `re_df` (takes ~30 seconds):
+#' Running that on all digestion enzymes in `re_df` (__Warning:__ this takes ~ 4.5 
+#' minutes and can use > 4GB RAM):
 #' 
 #+ run_digest
 re_df <- re_df %>% 
     mutate(digest = lapply(sites, digest_enzyme))
-
-
 
 #' 
 #' ### Accounting for missing data
@@ -169,7 +175,7 @@ z <- apply(re_df, 1,
                dig_i <- i$digest
                name_i <- i$enzyme
                loci_density_i <- seq_p * length(dig_i) / (nchar(genome_seq) / 1e6)
-               loci_total_i <- seq_p * length(dig_i) * 10
+               loci_total_i <- seq_p * length(dig_i)
                cat('---   ', name_i, '   ----\n')
                cat(sprintf('Loci per Mbp = %.2f', loci_density_i), '\n')
                cat(sprintf('Total loci = %s', 
@@ -177,19 +183,17 @@ z <- apply(re_df, 1,
                                   digits = 0, scientific = FALSE)), '\n\n')
                return(NULL)
            }); rm(z)
-
-
 #' 
 #' 
 #' # Choosing enzymes and visualizing fragment sizes
 #' 
 #' 
 #' From the summary above, I'll use *ApeKI* as a common restriction enzyme, 
-#' *MluI-HF* as intermediate, and
+#' *BstBI* as intermediate, and
 #' *NruI-HF* as rare.
 #' 
 #+ make_chosen_res
-chosen_res <- c('ApeKI', 'MluI-HF', 'NruI-HF')
+chosen_res <- c('ApeKI', 'BstBI', 'NruI-HF')
 #' 
 #' Below are histograms of the fragment sizes for the genome digested with each enzyme.
 #' 
@@ -198,7 +202,7 @@ plot_df <- re_df %>%
     filter(enzyme %in% chosen_res) %>% 
     split(.$enzyme) %>% 
     map_df(~ data_frame(enzyme = .x$enzyme, frag_len = nchar(.x$digest[[1]]))) %>% 
-    mutate(enzyme = factor(enzyme))
+    mutate(enzyme = factor(enzyme, levels = chosen_res))
 plot_df %>% 
     ggplot(aes(frag_len / 1e3)) +
     theme_classic() +
@@ -209,6 +213,7 @@ plot_df %>%
     ylab('Density') +
     scale_x_log10('Fragment length (Kbp)', breaks = c(0.1, 1, 10, 50)) +
     scale_fill_manual(values = c('#66c2a5','#fc8d62','#8da0cb'), guide = FALSE)
+rm(plot_df); invisible(gc(verbose = FALSE))
 #' 
 #' 
 #' 
@@ -230,18 +235,23 @@ write_list <- re_df %>%
     map(~ DNAStringSet(.x$digest[[1]])) %>% 
     map(~ magrittr::set_names(.x, paste0('seq_', 1:length(.x))))
 write_list
-
 #' 
-#' Now I write each `DNAStringSet` object to a compressed fasta file:
+#' To save some RAM before writing, I'm going to dump two large objects:
+#+ dump_objs
+rm(re_df, genome_seq)
+invisible(gc(verbose = FALSE))
+#' 
+#' 
+#' 
+#' Now I write each `DNAStringSet` object from `write_list` to a compressed fasta file 
+#' (this took ~5.5 mins on my computer):
 #' 
 #+ write_fastas, eval = FALSE
 for (enz in chosen_res) {
     writeFasta(write_list[[enz]], file = sprintf('frags_%s.fa.gz', enz), mode = 'w',
                compress = 'gzip')
+    cat(sprintf('%s file finished', enz), '\n')
 }
-
-
-
 #' 
 #' 
 #' # Session info and package versions

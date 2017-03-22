@@ -3,7 +3,7 @@ Digest genome
 Lucas Nell
 19 March 2017
 
--   [Make subset of genome](#make-subset-of-genome)
+-   [Read genome](#read-genome)
 -   [Make restriction enzyme data frame](#make-restriction-enzyme-data-frame)
 -   [Digest genome](#digest-genome)
     -   [Accounting for missing data](#accounting-for-missing-data)
@@ -12,7 +12,7 @@ Lucas Nell
 -   [Writing to fasta files](#writing-to-fasta-files)
 -   [Session info and package versions](#session-info-and-package-versions)
 
-*Updated 21 March 2017*
+*Updated 22 March 2017*
 
 In this script I perform in silico digestions of the aphid genome using multiple restriction enzymes. Once enzymes are chosen, I write the resulting fragments to fasta files.
 
@@ -40,13 +40,19 @@ biocLite('zlibbioc')
 install.packages('SimRAD')
 ```
 
-Make subset of genome
-=====================
+Read genome
+===========
 
-This converts the compressed fasta file of the aphid genome to a single string containing a random 10% of the sequences in the file.
+This converts the compressed fasta file of the aphid genome to a single string containing the sequences in the file. (It should take ~20 seconds.)
 
 ``` r
-set.seed(699)
+genome_seq <- ref.DNAseq('aphid_genome.fa.gz', subselect.contigs = FALSE)
+```
+
+If you want to test this script without using as much RAM or time, you can run the following code instead:
+
+``` r
+set.seed(1)
 genome_seq <- ref.DNAseq('aphid_genome.fa.gz', prop.contigs = 0.1)
 ```
 
@@ -118,7 +124,7 @@ digest_enzyme <- function(enzyme_sites, dna_seq = genome_seq) {
 }
 ```
 
-Running that on all digestion enzymes in `re_df` (takes ~30 seconds):
+Running that on all digestion enzymes in `re_df` (**Warning:** this takes ~ 4.5 minutes and can use &gt; 4GB RAM):
 
 ``` r
 re_df <- re_df %>% 
@@ -142,32 +148,32 @@ seq_p <- 654998 / 2.1e6
 Printing summary of each digestion, where all numbers assume `seq_p` proportion of sites get sequenced:
 
     ## ---    ApeKI    ----
-    ## Loci per Mbp = 181.06 
-    ## Total loci = 98,144 
+    ## Loci per Mbp = 183.12 
+    ## Total loci = 99,192 
     ## 
     ## ---    BstBI    ----
-    ## Loci per Mbp = 78.82 
-    ## Total loci = 42,725 
+    ## Loci per Mbp = 78.11 
+    ## Total loci = 42,312 
     ## 
     ## ---    AclI    ----
-    ## Loci per Mbp = 93.09 
-    ## Total loci = 50,463 
+    ## Loci per Mbp = 93.02 
+    ## Total loci = 50,386 
     ## 
     ## ---    MluI-HF    ----
-    ## Loci per Mbp = 49.92 
-    ## Total loci = 27,061 
+    ## Loci per Mbp = 48.41 
+    ## Total loci = 26,224 
     ## 
     ## ---    NruI-HF    ----
-    ## Loci per Mbp = 23.32 
-    ## Total loci = 12,638
+    ## Loci per Mbp = 23.08 
+    ## Total loci = 12,503
 
 Choosing enzymes and visualizing fragment sizes
 ===============================================
 
-From the summary above, I'll use *ApeKI* as a common restriction enzyme, *MluI-HF* as intermediate, and *NruI-HF* as rare.
+From the summary above, I'll use *ApeKI* as a common restriction enzyme, *BstBI* as intermediate, and *NruI-HF* as rare.
 
 ``` r
-chosen_res <- c('ApeKI', 'MluI-HF', 'NruI-HF')
+chosen_res <- c('ApeKI', 'BstBI', 'NruI-HF')
 ```
 
 Below are histograms of the fragment sizes for the genome digested with each enzyme.
@@ -191,56 +197,64 @@ write_list
 ```
 
     ## $ApeKI
-    ##   A DNAStringSet instance of length 31466
-    ##         width seq                                      names               
-    ##     [1]   471 GGTAGATCGCGGACCCCGT...GTTTTTGGGTGTAACTTG seq_1
-    ##     [2]  5354 CTGCAATGTTCAATAACTT...GCTAACAGAACTGGCGAG seq_2
-    ##     [3]  3343 CAGCACCGTGTGTAATATT...GATTGTGCACTTCCTATG seq_3
-    ##     [4]   458 CTGCAATGTAAAAAATGAA...TATTTAAAAATTTAATTG seq_4
-    ##     [5]  4508 CAGCATGAATTCTAAATCT...TTTTGTTCGTTAGTGATG seq_5
-    ##     ...   ... ...
-    ## [31462]  3804 CTGCAATCAAAACATGTGT...CTAATGGTACTGCTCCTG seq_31462
-    ## [31463] 12149 CTGCACATGGAGTTAATAT...GGCACTATGACAAGACGG seq_31463
-    ## [31464]  7973 CTGCGGGTATACTTGGTCA...AATATAATTAAAAATACG seq_31464
-    ## [31465] 26982 CTGCAAATAGTATAAACGT...GCATCGCAACAGCAACCG seq_31465
-    ## [31466]   306 CAGCGTCAGCCTTATCCTA...TGGGATGAGGGATGTCAT seq_31466
+    ##   A DNAStringSet instance of length 318022
+    ##          width seq                                     names               
+    ##      [1]   135 TTTACAATTGCTATTGTA...AATGACAATGTCCGTAAG seq_1
+    ##      [2]  2325 CAGCTCAAAAAGAGTCAA...AGATATTTTACCATTTGG seq_2
+    ##      [3]  4189 CTGCTTTTTTTAAAATAA...TGGCGCAACTGGTGTTTG seq_3
+    ##      [4]  1122 CAGCAGGCGTGAACAAGG...CCGTGAACCCTGTCCAGG seq_4
+    ##      [5]   880 CAGCGGCGGCGTCGTTTG...CGGCCGTCTCACGCGTCG seq_5
+    ##      ...   ... ...
+    ## [318018]    51 CAGCGGCTGATCTCCAAA...ACCGATCCTTTTCTGCGG seq_318018
+    ## [318019]    15 CTGCCGCAAGTATCG                         seq_318019
+    ## [318020]  1628 CTGCTGCAAGCCATATTT...AGGGATCCTTGTCTTGAG seq_318020
+    ## [318021]  1711 CTGCATTGTTTTTCTTTA...CATGTTTTTTGGCACGGG seq_318021
+    ## [318022]  3124 CAGCTGTACGTTGCCAGT...GTATAGGACTAGCTCTCC seq_318022
     ## 
-    ## $`MluI-HF`
-    ##   A DNAStringSet instance of length 8676
-    ##         width seq                                      names               
-    ##    [1]  22035 GGTAGATCGCGGACCCCGT...CCCGCAAAAAATGATAGA seq_1
-    ##    [2]   1425 CGCGTACCCGGTCAGACGT...TTTTTTGTTGATGTATAA seq_2
-    ##    [3]  26121 CGCGTTATAAGTACCTAAT...ACCTGCATGCACTAACTA seq_3
-    ##    [4]   4054 CGCGTAAATGACAAATGTA...GGTACTTATAAGTTATAA seq_4
-    ##    [5]  30229 CGCGTTATACATCAACAAA...CTTATATTGAAATTCCAA seq_5
-    ##    ...    ... ...
-    ## [8672]   5063 CGCGTTCATTTTCTAAGTC...TTGGACTTAGAAAATGAA seq_8672
-    ## [8673]   2925 CGCGTGAATAAATATATTG...CCGACCGAAATCAAAGGA seq_8673
-    ## [8674]  15879 CGCGTACTGGATTTCGATT...GGCGACGGGGAGGGCGGA seq_8674
-    ## [8675]   7391 CGCGTCGAAAAGGGGTAAA...TTTTTGTTGATGTATTAA seq_8675
-    ## [8676]   1692 CGCGTTATAAGTACCTAAT...TGGGATGAGGGATGTCAT seq_8676
+    ## $BstBI
+    ##   A DNAStringSet instance of length 135656
+    ##           width seq                                    names               
+    ##      [1]   3698 TTTACAATTGCTATTGTA...AAAAAAAATACTTATTT seq_1
+    ##      [2]   2224 CGAATATCATAATCAAAG...AAAAATAAAAATAATTT seq_2
+    ##      [3]   3181 CGAATAACCAAGTAGTCG...TCGTATCGTCGGTGGTT seq_3
+    ##      [4]    544 CGAAGTGATTTTTTTCGT...TTATTCAGACTACTTTT seq_4
+    ##      [5]    849 CGAAAAATAATTTTTATT...AATAGTATAATTATTTT seq_5
+    ##      ...    ... ...
+    ## [135652]   1931 CGAACGTTTGACTTTTAA...TCGTCTTTACCTCAGTT seq_135652
+    ## [135653]   8153 CGAAATAATAATAATAGC...AGTTGACTGCAAACTTT seq_135653
+    ## [135654]   1155 CGAAACAACATTATACTA...TATTTTTATAATTTTTT seq_135654
+    ## [135655]   4236 CGAAAAATATTAATGTAA...AAAAGTATAACATTTTT seq_135655
+    ## [135656]    198 CGAAAAACGTTTTAAAAC...TATAGGACTAGCTCTCC seq_135656
     ## 
     ## $`NruI-HF`
-    ##   A DNAStringSet instance of length 4052
-    ##         width seq                                      names               
-    ##    [1]  25526 GGTAGATCGCGGACCCCGT...GTTCATCCATTGAGGTCG seq_1
-    ##    [2]   1936 CGAAGCATGTTCTATATTT...ATGTCACTCGAAATTTCG seq_2
-    ##    [3]  78248 CGATGGTTTTCGCGTAACC...ACCGTGACCAGTGTTTCG seq_3
-    ##    [4]   2143 CGACGATTAAAATGAATCC...ACCGCCCTGTATCTCTCG seq_4
-    ##    [5]   7935 CGAGACAACGAGGATCGAC...GGTACAGTAGAAAAGTCG seq_5
-    ##    ...    ... ...
-    ## [4048]  84171 CGAAATCGATTGGCGAGCT...GGTATCACTAGTCGATCG seq_4048
-    ## [4049]  19698 CGATTGACTGATCGATCTT...AAGTGAAAAAAAAAATCG seq_4049
-    ## [4050]   1866 CGAAATAGTGAACTTCATT...TGTTAATTATAGTTGTCG seq_4050
-    ## [4051]  22440 CGATCGTTTACCGATCGGT...TCGAAAACGCGATAGTCG seq_4051
-    ## [4052]   9275 CGAAAAAAATCGAACGTCC...TGGGATGAGGGATGTCAT seq_4052
+    ##   A DNAStringSet instance of length 40087
+    ##          width seq                                     names               
+    ##     [1]   8222 TTTACAATTGCTATTGTA...TCACCCGCGTCTCTATCG seq_1
+    ##     [2]  14601 CGAGCTCTATCTCCCCTA...CCGAAATGACCGGTTTCG seq_2
+    ##     [3]  19034 CGATCGACTGTGGGCAAT...AGTGACACGATTAGATCG seq_3
+    ##     [4]  23487 CGAATGCATAAAGTCACA...TAACGTACCTAGGTATCG seq_4
+    ##     [5]   2755 CGATGTTATGGAATCTTT...GTTGTTCTACATTGATCG seq_5
+    ##     ...    ... ...
+    ## [40083]   7384 CGACACATTTTGTCCCCC...GAAATCCGATTTGTTTCG seq_40083
+    ## [40084]   3454 CGAATTGGGTGGACAGAA...CAATGTAACATTTTATCG seq_40084
+    ## [40085]  17769 CGAGATCAACGTTCATGA...TACAAAAACAGTTTATCG seq_40085
+    ## [40086]  16651 CGAGTCAAAAAGGTTGAT...TGTTTTCCACCAATTTCG seq_40086
+    ## [40087]   8128 CGACGAGCACAAGTAGGA...GTATAGGACTAGCTCTCC seq_40087
 
-Now I write each `DNAStringSet` object to a compressed fasta file:
+To save some RAM before writing, I'm going to dump two large objects:
+
+``` r
+rm(re_df, genome_seq)
+invisible(gc(verbose = FALSE))
+```
+
+Now I write each `DNAStringSet` object from `write_list` to a compressed fasta file (this took ~5.5 mins on my computer):
 
 ``` r
 for (enz in chosen_res) {
     writeFasta(write_list[[enz]], file = sprintf('frags_%s.fa.gz', enz), mode = 'w',
                compress = 'gzip')
+    cat(sprintf('%s file finished', enz), '\n')
 }
 ```
 
@@ -256,7 +270,7 @@ Session info and package versions
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-03-21
+    ##  date     2017-03-22
 
     ## Packages ------------------------------------------------------------------
 
