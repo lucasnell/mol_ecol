@@ -8,9 +8,10 @@
 #' *Updated `r format(Sys.Date(), '%d %B %Y')`*
 #' 
 #' 
-#' 
-#' 
-#' 
+#' This script accounts for the fact that in GBS, many potential cut sites are not 
+#' sequenced, and that the disparity is largely driven by fragment size. 
+#' It filters the digested fragments from the previous script 
+#' (`digest_genome.R`).
 #' 
 #' 
 #' 
@@ -27,28 +28,36 @@ suppressPackageStartupMessages(
         library(magrittr)
         library(ShortRead)
     }))
-
+#' 
+#' 
+#' 
+#' 
+#' # Characterizing sequenced fragments
+#' 
+#' 
+#' ## Proportion sequenced
 #' 
 #' > From six sequencing lanes, we identified 809,651 sequence tags (at least five times)
-#' > from one or both flanks of 654,998 of the 2.1 million ApeKI cut sites lying within
+#' > from one or both flanks of 654,998 of the 2.1 million *ApeKI* cut sites lying within
 #' > the single copy genomic fraction.
 #' 
-#' (Elshire et al. 2011, p 5)
+#' ([Elshire et al. 2011](http://dx.plos.org/10.1371/journal.pone.0019379), p 5)
 #' 
 #' From above, I've created below an object storing the proportion of cut sites that 
-#' I'll assume get sequenced:
+#' I'll assume get sequenced when using *ApeKI* in maize 
+#' (as was done in the above study):
 #' 
-
+#' 
 .seq_p <- round(654998 / 2.1e6, 4)
-
-
 #' 
-#' Used WebPlotDigitizer (arohatgi.info/WebPlotDigitizer/) to extract data from Figure 3 
-#' in Elshire et al. (2011).
 #' 
-
+#' 
+#+ rounded_p_fun, echo = FALSE
 rounded_p <- function(vec, round_digits = 4) {
     new_vec <- round(vec / sum(vec), round_digits)
+    # If the rounded numbers don't sum to 1, then add the difference to the 
+    # rounded number that differs most from the original, in the same direction as the
+    # difference between sum(new_vec) and 1
     if (sum(new_vec) != 1) {
         newish_vec <- vec / sum(vec)
         diffs <- (newish_vec - new_vec) * 10^round_digits
@@ -57,297 +66,254 @@ rounded_p <- function(vec, round_digits = 4) {
     }
     return(new_vec)
 }
-
+#' 
+#' 
+#' ## Data on distribution of fragments
+#' 
+#' I used WebPlotDigitizer (arohatgi.info/WebPlotDigitizer/) to extract data 
+#' from Figure 3 in Elshire et al. (2011) to a csv file (`frag_sizes.csv`).
+#' 
+#' The below code cleans up the csv file. The `rounded_p` function rounds proportion data
+#' to 4 digits while having the summed proportions still add up to 1.
+#' 
+#+ frag_sizes_df
 frag_sizes <- read_csv('frag_sizes.csv', col_types = 'cd') %>% 
     mutate(size = as.integer(rep(seq(50, 1000, 50), each = 2)),
-           type = rep(c('predicted', 'actual'), 1000 / 50)) %>% 
+           type = rep(c('predicted', 'sequenced'), 1000 / 50)) %>% 
     select(size, type, prop) %>% 
     group_by(type) %>%
     mutate(prop = rounded_p(prop)) %>%
     ungroup
-
-
+#' 
+#' 
+#' This figure showed the difference between the fragment-size distribution 
+#' (1) predicted from cut site locations in the maize genome and 
+#' (2) from locations where reads were actually found when sequencing was performed.
+#' The figure is reproduced below.
+#' 
+#+ frag_sizes_plot, echo = FALSE
 frag_sizes %>% 
-    ggplot(aes(size, prop)) + 
-    geom_bar(aes(fill = type), stat = 'identity', position = 'dodge') +
+    mutate(type = factor(type, levels = c('predicted', 'sequenced'))) %>% 
+    ggplot(aes(size - 25, prop)) + 
+    geom_bar(aes(fill = type), stat = 'identity', width = 45,
+             position = position_dodge(width = 30)) +
     theme_classic() +
-    scale_fill_manual(values = c('dodgerblue', 'red'))
-
-# Data frame incorporating censoring
+    scale_fill_manual(NULL, values = c('dodgerblue', 'red')) +
+    theme(legend.position = c(0.75, 0.75)) +
+    scale_x_continuous('Fragment size (bp)', breaks = seq(0, 1000, 50),
+                       labels = c(seq(0, 950, 50), 'Inf')) +
+    ylab('Proportion of total fragments') +
+    labs(caption = expression(italic(Note) * ': x-axis represents bin bounds'))
+#' 
+#' 
+#' 
+#' 
+#' ## Fitting a distribution for sequenced fragments
+#' 
+#' I next want to fit a negative binomial distribution to the size-distribution of
+#' sequenced fragments.
+#' Because these data are binned (i.e., censored), I have to use the `fitdistcens`
+#' function from the `fitdistrplus` package.
+#' This function requires as input a data frame with columns named "left" and "right".
+#' 
+#' The code below creates the left and right values appropriately for each size bin
+#' (see `?fitdistcens`), then creates a data frame with $p \times N$ rows of the
+#' left and right values, where $N$ is the total number of fragments and $p$ is the
+#' proportion of total fragments represented by that size bin (i.e., the height
+#' of its bar in the plot above).
+#' I'm assuming here that the total number of fragments ($N$) is the 809,651 from the 
+#' Elshire et al. (2011) quote at the top of this document.
+#' 
 cens_df <- frag_sizes %>% 
-    split(interaction(.$size, .$type)) %>% 
+    filter(type == 'sequenced') %>% 
+    split(.$size) %>% 
     map_df(
-        function(.x) {
+        function(.x, total_frags = 809651) {
             .left <- .x$size - 49
             .right <- ifelse(.x$size == 1000, NA, .x$size)
-            .type = .x$type
-            N <- round(.x$prop * 1e4, 0)
-            data_frame(type = rep(.type, N), 
-                       left = rep(.left, N),  right = rep(.right, N))
+            N <- round(.x$prop * total_frags, 0)
+            data_frame(left = rep(.left, N),  right = rep(.right, N))
         }
     )
-
-
-actual_fit <- cens_df %>% 
-    filter(type == 'actual') %>% 
-    select(-type) %>% 
-    as.data.frame %>% 
-    # fitdistcens('lnorm')
-    fitdistcens('nbinom')
-actual_fit %>% summary
-
-
-
-
-
-predicted_fit <- cens_df %>% 
-    filter(type == 'predicted') %>% 
-    select(-type) %>% 
-    as.data.frame %>% 
-    # fitdistcens('lnorm')
-    fitdistcens('nbinom')
-predicted_fit %>% summary
-
-
-
-act_prop <- function(sizes) {
-    dnbinom(sizes, size = coef(actual_fit)[['size']], 
-            mu = coef(actual_fit)[['mu']])
+#' 
+#' 
+#' Now I do the actual fitting using `fitdistcens`. (This took ~1 minute)
+#' 
+#' *Note*: Even though `fitdistcens` can't use a "tibble" data frame, I'm keeping
+#' `cens_df` in that format to keep me from accidentally printing >800,000 rows.
+#' 
+#' 
+seq_fit <- fitdistcens(as.data.frame(cens_df), 'nbinom')
+summary(seq_fit)
+#' 
+#' 
+#' 
+#' I can now create a function to calculate the probability density for a given 
+#' fragment size.
+#' 
+act_prob <- function(sizes) {
+    dnbinom(sizes, size = coef(seq_fit)[['size']], 
+            mu = coef(seq_fit)[['mu']])
 }
-
-pred_prop <- function(sizes) {
-    dnbinom(sizes, size = coef(predicted_fit)[['size']], 
-            mu = coef(predicted_fit)[['mu']])
-}
-
-
-
-bin_prop <- function(sizes, bin_size = 50, last_max = 951, distr = 'actual') {
-    
-    distr_coefs <- coef(get(paste0(distr, '_fit')))
-    
-    size_lims <- cbind(mins = seq(1, last_max, bin_size), 
-                       maxes = c(seq(bin_size, last_max - 1, bin_size), Inf))
-    
-    size_inds <- sapply(
-        sizes,
-        function(s) {
-            which(size_lims[,1] <= s & size_lims[,2] >= s)
-        }
-    )
-    
-    size_lims <- tryCatch(
-        size_lims[size_inds,], 
-        error = function(e) {
-            if (grepl('invalid subscript', e)) {
-                stop(paste('You probably have zeros in your data. Since having 0-length', 
-                     'fragments makes no sense, I have not allowed for that here.'))
-            } else stop(e)
-        }
-    )
-    
-    bin_prop_vec <- apply(size_lims, 1, 
-                       function(r) {
-                           .under <- pnbinom(r[1] - 1, size = distr_coefs[['size']], 
-                                             mu = distr_coefs[['mu']], lower.tail = TRUE)
-                           .over <- pnbinom(r[2], size = distr_coefs[['size']], 
-                                            mu = distr_coefs[['mu']], lower.tail = FALSE)
-                           return(1 - .over - .under)
-                       })
-    
-    return(bin_prop_vec)
-}
-
-
-
-
+#' 
+#' 
+#' Here is the probability density function (black curve, right y-axis) along with
+#' the binned distribution of fragment sizes for sequenced reads 
+#' (blue bars, left y-axis):
+#' 
+#+ frag_size_plot, echo = FALSE
 frag_sizes %>% 
-    filter(type == 'actual') %>% 
+    filter(type == 'sequenced') %>% 
     ggplot(aes(y = prop)) + 
     geom_bar(aes(size - 25), stat = 'identity', position = 'dodge', 
              fill = 'dodgerblue') +
     theme_classic() + 
-    geom_line(data = data_frame(size = 1:1000, prop = act_prop(size)) %>% 
+    geom_line(data = data_frame(size = 1:1000, prop = act_prob(size)) %>% 
                   mutate(prop = max(frag_sizes$prop) * prop / max(prop)),
               aes(size), size = 0.75) +
-    ylab('Proportion of total fragments') +
-    xlab('Fragment size (bp)')
-
-
-frag_sizes %>% 
-    filter(type == 'predicted') %>% 
-    ggplot(aes(y = prop)) + 
-    geom_bar(aes(size - 25), stat = 'identity', position = 'dodge', 
-             fill = 'red') +
-    theme_classic() + 
-    geom_line(data = data_frame(size = 1:1000, prop = pred_prop(size)) %>% 
-                  mutate(prop = max(frag_sizes$prop[frag_sizes$type == 'predicted']) *
-                             prop / max(prop)),
-              aes(size), size = 0.75) +
-    ylab('Proportion of total fragments') +
-    xlab('Fragment size (bp)')
-
-
-
-# Comparing distributions:
-data_frame(x = 1:1000) %>% 
-    ggplot(aes(x)) +
-    theme_classic() +
-    geom_line(aes(y = act_prop(x)), color = 'dodgerblue', size = 0.75) +
-    geom_line(aes(y = pred_prop(x)), color = 'red', size = 0.75) +
-    xlab('Fragment length (bp)') +
-    ylab('Density')
-
-
-
-sim_frags <- data_frame(frag_len = rnbinom(3e4L, size = coef(predicted_fit)[['size']], 
-                                           mu = coef(predicted_fit)[['mu']])) %>% 
-    mutate(
-        frag_len = ifelse(frag_len == 0, 1, frag_len),
-        prop = bin_prop(frag_len),
-        id = paste0('f_', 1:length(frag_len))) %>% 
-    group_by(prop) %>% 
-    mutate(keep = rbinom(n(), 1, p = prop)) %>% 
-    ungroup
-
-
-sim_frags %>% 
-    filter(keep == 1) %T>% 
-    {N <<- nrow(.); .} %>% 
-    ggplot(aes(frag_len)) +
-    theme_classic() +
-    geom_histogram(aes(y = ..density..), binwidth = 50, fill = 'dodgerblue') +
-    annotate('text', x = 400, y = 0.002, 
-             label = sprintf('paste(italic(p) == %.4f)', N / nrow(sim_frags)), 
-             parse = TRUE) +
-    coord_cartesian(xlim = c(0, 1000))
-
-
-
-# sim_frags %>% 
-#     ggplot(aes(factor(keep, levels = 0:1, labels = c('No', 'Yes')), frag_len)) +
-#     geom_point(position = position_jitter(0.2, 0), alpha = 0.2) +
-#     theme_classic() +
-#     scale_y_continuous('Fragment length (bp)') +
-#     scale_x_discrete('Kept in simulation?')
-
-
-
-
-# =======================================================================================
-# =======================================================================================
-# =======================================================================================
-# =======================================================================================
-
-#           Reading in fragments
-
-# =======================================================================================
-# =======================================================================================
-# =======================================================================================
-# =======================================================================================
-
-
+    scale_x_continuous('Fragment size (bp)', breaks = seq(0, 1000, 50),
+                       labels = c(seq(0, 950, 50), 'Inf')) +
+    scale_y_continuous(
+        'Proportion of total fragments', 
+        sec.axis = sec_axis(~ . * max(act_prob(1:1000)) / max(frag_sizes$prop), 
+                            name = 'Density')) +
+    labs(caption = expression(italic(Note) * ': x-axis represents bin bounds for bars'))
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' # Reading in digestion fragments
+#' 
+#' 
+#' I now read the fasta files made in `digest_genome.R` that represent in silico 
+#' digestions of the aphid genome using three different restriction enzymes.
+#' 
+#' 
 chosen_res <- c('ApeKI', 'BstBI', 'NruI-HF')
-
 dig_frags <- lapply(setNames(chosen_res, chosen_res), function(enz) {
     fasta <- readFasta(sprintf('frags_%s.fa.gz', enz))
     sread(fasta)
 })
-
-dig_frag_sizes <- lapply(dig_frags, width)
-
+#' 
+#' 
+#' This is a data frame containing, for each restriction enzyme, all fragment lengths and
+#' their probability densities from the sequenced-fragment probability density function.
+#' 
 dig_frag_df <- lapply(chosen_res, 
                       function(re){
-                          data_frame(frag_len = dig_frag_sizes[[re]]) %>% 
-                              mutate(prop = act_prop(frag_len), enzyme = re)
+                          .frag_len <- width(dig_frags[[re]])
+                          .prob <- act_prob(.frag_len)
+                          .df <- data_frame(enzyme = re, 
+                                            frag_len = .frag_len, 
+                                            prob = .prob)
+                          return(.df)
                       }) %>% 
     bind_rows
-
-
-
-differ_curves <- function(par_name, par_vec, p_cols = c('#e41a1c','#377eb8','#4daf4a',
-                                                        '#984ea3','#ff7f00')) {
-    if(length(par_vec) != length(p_cols)) stop('par_vec must be same length as p_cols')
-    curve(dnbinom(x, size = coef(actual_fit)[['size']], mu = coef(actual_fit)[['mu']]), 
-          1, 1000, n = 1000, ylab = 'density', main = par_name)
-    if (par_name == 'mu') {
-        for (z in 1:length(par_vec)){
-            curve(dnbinom(x, size = coef(actual_fit)[['size']], 
-                          mu = coef(actual_fit)[['mu']] + par_vec[z]),
-                  1, 1000, n = 1000, add = TRUE, col = p_cols[z])
-        }
-    } else if (par_name == 'size') {
-        for (z in 1:length(par_vec)){
-            curve(dnbinom(x, size = coef(actual_fit)[['size']] + par_vec[z], 
-                          mu = coef(actual_fit)[['mu']]),
-                  1, 1000, n = 1000, add = TRUE, col = p_cols[z])
-        }
-    } else {
-        for (z in 1:length(par_vec)){
-            curve(dnbinom(x, size = coef(actual_fit)[['size']], 
-                          prob = (coef(actual_fit)[['size']] / {coef(actual_fit)[['mu']] +
-                                  coef(actual_fit)[['size']]}) + par_vec[z]),
-                  1, 1000, n = 1000, add = TRUE, col = p_cols[z])
-        }
-    }
-}
-
-par(mfrow = c(3, 1))
-differ_curves('size', 1:5*1)
-differ_curves('mu', 1:5*20)
-differ_curves('prob', -1:-5*0.001)
-par(mfrow = c(1,1))
-
-
-enz <- chosen_res[2]
-dig_frag_df %>% 
-    filter(enzyme == enz) %>% 
-    sample_frac(.seq_p, weight = prop) %T>%
-    {N <<- nrow(.); .} %>%
-    ggplot(aes(frag_len)) +
-    geom_histogram(aes(y = ..density..), binwidth = 50, fill = 'dodgerblue') +
-    # annotate('text', x = 400, y = 0.002,
-    #          label = sprintf('paste(italic(p) == %.4f)', 
-    #                          N / nrow(filter(dig_frag_df, enzyme == enz))),
-    #          parse = TRUE) +
-    # coord_cartesian(xlim = c(0, 1000)) +
-    theme_classic()
-
-
-
-
-# .test <- filter(dig_frag_df, enzyme == 'ApeKI')
-
-filt_frags <- function(props, multiplier = tryCatch(.def_mult, error = function(e) 1)) {
-    .keep <- sapply(props * multiplier, function(p) rbinom(1, 1, prob = min(c(1, p))))
-    return(.keep == 1)
-}
-
-
-
-
+dig_frag_df
+#' 
+#' 
+#' 
+#' 
+#' 
+#' # Calibrating probability distribution for *ApeKI*
+#' 
+#' 
+#' From here, I could filter *ApeKI*-digested fragments using the following code:
+#' 
+#' ```{r sample_code, eval = FALSE}
+#' dig_frag_df %>% 
+#'     filter(enzyme == 'ApeKI') %>% 
+#'     sample_frac(.seq_p, weight = prob)
+#' ```
+#' 
+#' ... which would give fragments with a higher probability density a greater chance
+#' of being selected and would give me the proportion I expect based on the maize-genome
+#' data.
+#' 
+#' If I did that for the other restriction enzymes, I would have to assume that the same
+#' proportion of fragments would be sequenced with them as with *ApeKI*.
+#' These restriction enzymes created longer average fragments than *ApeKI*, and we're
+#' assuming that fragment size is the primary determinant of whether a fragment is
+#' sequenced. Thus I decided not to use the sampling approach above.
+#' 
+#' What I decided upon was to multiply the probability densities by a coefficient while
+#' limiting the new resulting probability to a maximum of 1:
+#' 
+#' $$p_i^{\prime} = \min(\{ \beta p_i, 1 \})$$
+#' 
+#' where 
+#' $\beta$ is the selected coefficient and
+#' $p_i$ is the probability density of fragment $i$.
+#' I treated whether fragment $i$ is sequenced as a Bernoulli trial with probability
+#' $p_i^{\prime}$.
+#' 
+#' The expected proportion selected ($\mathbb{E}(P)$) was calculated as such:
+#' 
+#' $$\mathbb{E}(P) = \frac{\sum_{i=1}^{n} p_i^{\prime} }{n}$$
+#' 
+#' where $n$ is the total number of fragments.
+#' 
+#' I tested multiple coefficients to find the one that minimized the absolute difference
+#' between the proportion of individuals we would predict would be selected from our 
+#' data (i.e., $\mathbb{E}(P)$) and the proportion sequenced from the maize data ($P_m$).
+#' 
+#' 
+#' 
 #' 
 #+ get_multiplier, echo = FALSE
 test_seq_ <- seq(594.5, 595, 0.1)
-test_prop_ <- filter(dig_frag_df, enzyme == 'ApeKI')$prop
+test_prob_ <- filter(dig_frag_df, enzyme == 'ApeKI')$prob
 test_m_ <- sapply(test_seq_,
-                  function(m) abs(mean(ifelse(test_prop_ * m > 1, 1, test_prop_ * m)) - 
+                  function(m) abs(mean(ifelse(test_prob_ * m > 1, 1, test_prob_ * m)) - 
                                       .seq_p))
-par(mar = c(5, 4, 1, 1))
-plot(test_m_ ~ test_seq_, type = 'l', ylab = 'abs(prop with multiplier - .seq_p)', 
+par(mar = c(5, 4.5, 1, 1))
+plot(test_m_ ~ test_seq_, type = 'l', ylab = expression('|' ~ E(P) - P[m] ~ '|'), 
      xlab = 'Multiplier')
-.def_mult <- test_seq_[test_m_ == min(test_m_)]
+.prob_coef <- test_seq_[test_m_ == min(test_m_)]
 rm(list = ls()[grepl('^test_.*_$', ls())])
+#' 
+#' 
+#' The best coefficient (`r .prob_coef`) was assigned to object `.prob_coef`.
+#' 
+#' 
+#' 
+#' 
 
 
 
+
+
+#' ([here](http://r-bloggers.com/variable-probability-bernoulli-outcomes-fast-and-slow/))
+
+fast_bern <- function(p) {
+    U <- runif(length(p),0,1)
+    outcomes <- U < p
+    return(outcomes)
+}
+
+
+filt_frags <- function(probs, coefficient = tryCatch(.prob_coef, error = function(e) 1)) {
+    .keep <- fast_bern(probs * coefficient)
+    return(.keep)
+}
+
+
+
+
+
+
+
 # ======================================================================================
 # ======================================================================================
 # ======================================================================================
 # ======================================================================================
 # ======================================================================================
 
-# LEFT OFF: Organize and apply filter using .def_mult to other digestions
+# LEFT OFF: Organize and apply filter using .prob_coef to other digestions
 
 # ======================================================================================
 # ======================================================================================
@@ -358,14 +324,14 @@ rm(list = ls()[grepl('^test_.*_$', ls())])
 
 
 # # Visualizing output:
-# data_frame(size = .test$frag_len[filt_frags(.test$prop)]) %>% 
+# data_frame(size = .test$frag_len[filt_frags(.test$prob)]) %>% 
 #     ggplot() +
 #     theme_classic() +
 #     geom_histogram(aes(size, ..density..), binwidth = 50, fill = 'dodgerblue', 
 #                    closed = 'left', center = 25) +
-#     geom_line(data = data_frame(size = 1:750, prop = act_prop(size)) %>% 
-#                   mutate(prop = 0.0055 * prop / max(prop)),
-#               aes(size, prop), size = 0.75)
+#     geom_line(data = data_frame(size = 1:750, prob = act_prob(size)) %>% 
+#                   mutate(prob = 0.0055 * prob / max(prob)),
+#               aes(size, prob), size = 0.75)
 
 
 

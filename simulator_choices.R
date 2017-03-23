@@ -14,7 +14,7 @@
 #' of genomic next-generation sequencing data. *Nature Reviews Genetics* __17__:459–469.
 #' 
 #' 
-#' ## Loading packages:
+#' __Loading packages:__
 #' 
 #+ packages
 suppressPackageStartupMessages({
