@@ -17,9 +17,14 @@ where *β* is the selected coefficient and *p*<sub>*i*</sub> is the probability 
 
 The expected proportion selected (𝔼(*P*)) was calculated as such:
 
-$$\mathbb{E}(P) = \frac{\sum_{i=1}^{n} p_i^{\prime} }{n}$$
+$(P) = $
 
-*E*(*P*)=*n* *p*<sub>*i*</sub><sup>′</sup>
+<!---
+$\frac{\sum_{i=1}^{n} p_i^{\prime} }{n}$
+-->
+![Expected proportion](./size_filter_files/figure-markdown_github/expected_prop.pdf)
+
+*E*(*P*)=*n**p*<sub>*i*</sub><sup>′</sup>
 
 where *n* is the total number of fragments.
 

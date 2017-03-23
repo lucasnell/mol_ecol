@@ -23,7 +23,15 @@
 #' 
 #' The expected proportion selected ($\mathbb{E}(P)$) was calculated as such:
 #' 
-#' $$\frac{\sum_{i=1}^{n} p_i^{\prime} }{n}$$
+#' $\mathbb{E}(P) = $ 
+#' 
+#' <!---
+#' $\frac{\sum_{i=1}^{n} p_i^{\prime} }{n}$
+#' -->
+#' 
+#' ![Expected proportion](./size_filter_files/figure-markdown_github/expected_prop.pdf)
+#' 
+#' 
 #' 
 #' $$E(P) = n p_i^{\prime}$$
 #' 

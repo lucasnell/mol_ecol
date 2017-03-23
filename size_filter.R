@@ -262,7 +262,10 @@ dig_frag_df <- lapply(.chosen_enz,
 #' 
 #' The expected proportion selected ($\mathbb{E}(P)$) was calculated as such:
 #' 
+#' <!---
 #' $${\mathbb{E}}(P) = \frac{\sum_{i=1}^{n} p_i^{\prime} }{n}$$
+#' -->
+#' ![Expected proportion](.//)
 #' 
 #' where $n$ is the total number of fragments.
 #' 
