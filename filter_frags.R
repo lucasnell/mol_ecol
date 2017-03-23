@@ -21,6 +21,7 @@
 suppressPackageStartupMessages(
     suppressWarnings({
         library(fitdistrplus)
+        library(tidyr)
         library(purrr)
         library(readr)
         library(ggplot2)
@@ -151,9 +152,8 @@ summary(seq_fit)
 #' I can now create a function to calculate the probability density for a given 
 #' fragment size.
 #' 
-act_prob <- function(sizes) {
-    dnbinom(sizes, size = coef(seq_fit)[['size']], 
-            mu = coef(seq_fit)[['mu']])
+.prob_dens <- function(frag_sizes) {
+    dnbinom(frag_sizes, size = 2.013, mu = 144.8)
 }
 #' 
 #' 
@@ -168,14 +168,14 @@ frag_sizes %>%
     geom_bar(aes(size - 25), stat = 'identity', position = 'dodge', 
              fill = 'dodgerblue') +
     theme_classic() + 
-    geom_line(data = data_frame(size = 1:1000, prop = act_prob(size)) %>% 
+    geom_line(data = data_frame(size = 1:1000, prop = .prob_dens(size)) %>% 
                   mutate(prop = max(frag_sizes$prop) * prop / max(prop)),
               aes(size), size = 0.75) +
     scale_x_continuous('Fragment size (bp)', breaks = seq(0, 1000, 50),
                        labels = c(seq(0, 950, 50), 'Inf')) +
     scale_y_continuous(
         'Proportion of total fragments', 
-        sec.axis = sec_axis(~ . * max(act_prob(1:1000)) / max(frag_sizes$prop), 
+        sec.axis = sec_axis(~ . * max(.prob_dens(1:1000)) / max(frag_sizes$prop), 
                             name = 'Density')) +
     labs(caption = expression(italic(Note) * ': x-axis represents bin bounds for bars'))
 #' 
@@ -193,8 +193,8 @@ frag_sizes %>%
 #' digestions of the aphid genome using three different restriction enzymes.
 #' 
 #' 
-chosen_res <- c('ApeKI', 'BstBI', 'NruI-HF')
-dig_frags <- lapply(setNames(chosen_res, chosen_res), function(enz) {
+chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
+dig_frags <- lapply(setNames(chosen_enz, chosen_enz), function(enz) {
     fasta <- readFasta(sprintf('frags_%s.fa.gz', enz))
     sread(fasta)
 })
@@ -203,17 +203,18 @@ dig_frags <- lapply(setNames(chosen_res, chosen_res), function(enz) {
 #' This is a data frame containing, for each restriction enzyme, all fragment lengths and
 #' their probability densities from the sequenced-fragment probability density function.
 #' 
-dig_frag_df <- lapply(chosen_res, 
+dig_frag_df <- lapply(chosen_enz, 
                       function(re){
                           .frag_len <- width(dig_frags[[re]])
-                          .prob <- act_prob(.frag_len)
+                          .prob <- .prob_dens(.frag_len)
+                          .frag_index <- 1:length(.frag_len)
                           .df <- data_frame(enzyme = re, 
+                                            frag_index = .frag_index,
                                             frag_len = .frag_len, 
                                             prob = .prob)
                           return(.df)
                       }) %>% 
     bind_rows
-dig_frag_df
 #' 
 #' 
 #' 
@@ -265,6 +266,8 @@ dig_frag_df
 #' 
 #' 
 #+ get_multiplier, echo = FALSE
+# (Since these objects are temporary, I'm making them start with 'test_' and end in '_' so
+# they're easy to search for and remove.)
 test_seq_ <- seq(594.5, 595, 0.1)
 test_prob_ <- filter(dig_frag_df, enzyme == 'ApeKI')$prob
 test_m_ <- sapply(test_seq_,
@@ -282,28 +285,65 @@ rm(list = ls()[grepl('^test_.*_$', ls())])
 #' 
 #' 
 #' 
-
-
-
-
-
-#' ([here](http://r-bloggers.com/variable-probability-bernoulli-outcomes-fast-and-slow/))
-
-fast_bern <- function(p) {
+#' 
+#' 
+#' 
+#' 
+#' # Testing fragment filtering by size
+#' 
+#' 
+#' In this section I test how the calibrated probability densities impact the 
+#' proportion of fragments sequenced for all enzymes, using simulated Bernoulli trials.
+#' 
+#' The `.fast_bern` function quickly performs many Bernoulli trials, each with a unique 
+#' probability (link to where I found it
+#' [here](http://r-bloggers.com/variable-probability-bernoulli-outcomes-fast-and-slow/)).
+#' It is ~75 faster than using `sapply` on a `rbinom(1,1,p)` call, and it returns a 
+#' logical instead of a binary integer vector, which makes filtering simpler.
+#' 
+#' The `test_filter` function filters the `dig_frag_df` data frame by values in the
+#' `prob` column multiplied by `.prob_coef`, then it gets the number of rows present in 
+#' the filtered data frame.
+#' It returns the proportion of fragments retained for sequencing.
+#' 
+.fast_bern <- function(p) {
     U <- runif(length(p),0,1)
     outcomes <- U < p
     return(outcomes)
 }
-
-
-filt_frags <- function(probs, coefficient = tryCatch(.prob_coef, error = function(e) 1)) {
-    .keep <- fast_bern(probs * coefficient)
-    return(.keep)
+test_filter <- function(enz) {
+    filt_df <- filter(dig_frag_df, enzyme == enz)
+    N <- nrow(filter(filt_df, .fast_bern(prob * .prob_coef)))
+    return(N / nrow(filt_df))
 }
-
-
-
-
+#' 
+#' 
+#' Now I run the tests, and find that, as I intended, the proportion of sequenced reads
+#' decreases with restriction enzymes having fewer cut sites.
+#' 
+set.seed(329)
+sapply(chosen_enz, 
+                    function(e) sapply(1:100, function(i) test_filter(e))) %>% 
+    as_data_frame %>% 
+    gather(enzyme, prop) %>% 
+    group_by(enzyme) %>% 
+    summarize(`mean` = mean(prop), `sd` = sd(prop)) %>% 
+    as.data.frame
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' # Creating functions to simulate size filtering
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
 
 
 
@@ -329,7 +369,7 @@ filt_frags <- function(probs, coefficient = tryCatch(.prob_coef, error = functio
 #     theme_classic() +
 #     geom_histogram(aes(size, ..density..), binwidth = 50, fill = 'dodgerblue', 
 #                    closed = 'left', center = 25) +
-#     geom_line(data = data_frame(size = 1:750, prob = act_prob(size)) %>% 
+#     geom_line(data = data_frame(size = 1:750, prob = .prob_dens(size)) %>% 
 #                   mutate(prob = 0.0055 * prob / max(prob)),
 #               aes(size, prob), size = 0.75)
 
