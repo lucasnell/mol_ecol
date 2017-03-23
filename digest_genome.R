@@ -259,7 +259,3 @@ for (enz in chosen_res) {
 #' 
 #+ session_info, echo = FALSE
 devtools::session_info()
-
-
-
-
