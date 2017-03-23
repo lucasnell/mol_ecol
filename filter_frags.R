@@ -39,9 +39,7 @@ suppressPackageStartupMessages(
 #' I'll assume get sequenced:
 #' 
 
-seq_p <- 654998 / 2.1e6
-
-
+.seq_p <- round(654998 / 2.1e6, 4)
 
 
 #' 
@@ -265,13 +263,6 @@ dig_frag_df <- lapply(chosen_res,
                       }) %>% 
     bind_rows
 
-do.call(dnbinom, as.list(c(coef(actual_fit), x = 10)))
-dnbinom(10, size = coef(actual_fit)[['size']], 
-        prob = (coef(actual_fit)[['size']] / {coef(actual_fit)[['mu']] + coef(actual_fit)[['size']]}))
-dnbinom(10, size = coef(actual_fit)[['size']], 
-        prob = (coef(actual_fit)[['size']] / {coef(actual_fit)[['mu']] + coef(actual_fit)[['size']]}))
-# dlnorm(1e4, meanlog = 4.7235121, sdlog = 0.6949672)
-
 
 
 differ_curves <- function(par_name, par_vec, p_cols = c('#e41a1c','#377eb8','#4daf4a',
@@ -311,7 +302,7 @@ par(mfrow = c(1,1))
 enz <- chosen_res[2]
 dig_frag_df %>% 
     filter(enzyme == enz) %>% 
-    sample_frac(seq_p, weight = prop) %T>%
+    sample_frac(.seq_p, weight = prop) %T>%
     {N <<- nrow(.); .} %>%
     ggplot(aes(frag_len)) +
     geom_histogram(aes(y = ..density..), binwidth = 50, fill = 'dodgerblue') +
@@ -325,32 +316,58 @@ dig_frag_df %>%
 
 
 
-.test <- filter(dig_frag_df, enzyme == 'ApeKI')
+# .test <- filter(dig_frag_df, enzyme == 'ApeKI')
 
-filt_frags <- function(props, multiplier = 6e2) {
+filt_frags <- function(props, multiplier = tryCatch(.def_mult, error = function(e) 1)) {
     .keep <- sapply(props * multiplier, function(p) rbinom(1, 1, prob = min(c(1, p))))
     return(.keep == 1)
 }
 
-# Testing multipliers:
-mean(filt_frags(.test$prop, 6e2))
+
+
+
+#' 
+#+ get_multiplier, echo = FALSE
+test_seq_ <- seq(594.5, 595, 0.1)
+test_prop_ <- filter(dig_frag_df, enzyme == 'ApeKI')$prop
+test_m_ <- sapply(test_seq_,
+                  function(m) abs(mean(ifelse(test_prop_ * m > 1, 1, test_prop_ * m)) - 
+                                      .seq_p))
+par(mar = c(5, 4, 1, 1))
+plot(test_m_ ~ test_seq_, type = 'l', ylab = 'abs(prop with multiplier - .seq_p)', 
+     xlab = 'Multiplier')
+.def_mult <- test_seq_[test_m_ == min(test_m_)]
+rm(list = ls()[grepl('^test_.*_$', ls())])
+
+
+
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+
+# LEFT OFF: Organize and apply filter using .def_mult to other digestions
+
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+
+
+# # Visualizing output:
+# data_frame(size = .test$frag_len[filt_frags(.test$prop)]) %>% 
+#     ggplot() +
+#     theme_classic() +
+#     geom_histogram(aes(size, ..density..), binwidth = 50, fill = 'dodgerblue', 
+#                    closed = 'left', center = 25) +
+#     geom_line(data = data_frame(size = 1:750, prop = act_prop(size)) %>% 
+#                   mutate(prop = 0.0055 * prop / max(prop)),
+#               aes(size, prop), size = 0.75)
 
 
 
 
-# Visualizing output:
-data_frame(size = .test$frag_len[filt_frags(.test$prop)]) %>% 
-    ggplot() +
-    theme_classic() +
-    geom_histogram(aes(size, ..density..), binwidth = 50, fill = 'dodgerblue', 
-                   closed = 'left', center = 25) +
-    geom_line(data = data_frame(size = 1:750, prop = act_prop(size)) %>% 
-                  mutate(prop = 0.0055 * prop / max(prop)),
-              aes(size, prop), size = 0.75)
-
-
-
-
-
-rm(.test)
 
