@@ -22,8 +22,7 @@ This script accounts for the fact that in GBS, many potential cut sites are not 
 **Loading packages:**
 
 ``` r
-suppressPackageStartupMessages(
-    suppressWarnings({
+suppressPackageStartupMessages({
         library(fitdistrplus)
         library(tidyr)
         library(purrr)
@@ -32,7 +31,7 @@ suppressPackageStartupMessages(
         library(dplyr)
         library(magrittr)
         library(ShortRead)
-    }))
+    })
 ```
 
 Characterizing sequenced fragments
@@ -132,10 +131,12 @@ Reading in digestion fragments
 
 I now read the fasta files made in `digest_genome.R` that represent in silico digestions of the aphid genome using three different restriction enzymes.
 
+(See the `README.md` file for why I'm including `./genome_data/` in file paths.)
+
 ``` r
 .chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
 dig_frags <- lapply(setNames(.chosen_enz, .chosen_enz), function(enz) {
-    fasta <- readFasta(sprintf('frags_%s.fa.gz', enz))
+    fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))
     sread(fasta)
 })
 ```
@@ -280,7 +281,7 @@ Session info and package versions
     ## Session info --------------------------------------------------------------
 
     ##  setting  value                       
-    ##  version  R version 3.3.2 (2016-10-31)
+    ##  version  R version 3.3.3 (2017-03-06)
     ##  system   x86_64, darwin13.4.0        
     ##  ui       X11                         
     ##  language (EN)                        
@@ -304,23 +305,24 @@ Session info and package versions
     ##  digest                 0.6.12   2017-01-27 CRAN (R 3.3.2)
     ##  dplyr                * 0.5.0    2016-06-24 CRAN (R 3.3.0)
     ##  evaluate               0.10     2016-10-11 CRAN (R 3.3.0)
-    ##  fitdistrplus         * 1.0-8    2017-02-01 CRAN (R 3.3.2)
+    ##  fitdistrplus         * 1.0-9    2017-03-24 CRAN (R 3.3.2)
     ##  GenomeInfoDb         * 1.10.3   2017-02-07 Bioconductor  
     ##  GenomicAlignments    * 1.10.1   2017-03-18 Bioconductor  
     ##  GenomicRanges        * 1.26.4   2017-03-18 Bioconductor  
     ##  ggplot2              * 2.2.1    2016-12-30 CRAN (R 3.3.2)
     ##  gtable                 0.2.0    2016-02-26 CRAN (R 3.3.0)
+    ##  hms                    0.3      2016-11-22 CRAN (R 3.3.2)
     ##  htmltools              0.3.5    2016-03-21 CRAN (R 3.3.0)
     ##  hwriter                1.3.2    2014-09-10 CRAN (R 3.3.0)
     ##  IRanges              * 2.8.2    2017-03-18 Bioconductor  
     ##  knitr                  1.15.1   2016-11-22 CRAN (R 3.3.2)
     ##  labeling               0.3      2014-08-23 CRAN (R 3.3.0)
-    ##  lattice                0.20-34  2016-09-06 CRAN (R 3.3.2)
+    ##  lattice                0.20-34  2016-09-06 CRAN (R 3.3.3)
     ##  latticeExtra           0.6-28   2016-02-09 CRAN (R 3.3.0)
     ##  lazyeval               0.2.0    2016-06-12 CRAN (R 3.3.0)
     ##  magrittr             * 1.5      2014-11-22 CRAN (R 3.3.0)
-    ##  MASS                 * 7.3-45   2016-04-21 CRAN (R 3.3.2)
-    ##  Matrix                 1.2-8    2017-01-20 CRAN (R 3.3.2)
+    ##  MASS                 * 7.3-45   2016-04-21 CRAN (R 3.3.3)
+    ##  Matrix                 1.2-8    2017-01-20 CRAN (R 3.3.3)
     ##  memoise                1.0.0    2016-01-29 CRAN (R 3.3.0)
     ##  munsell                0.4.3    2016-02-13 CRAN (R 3.3.0)
     ##  plyr                   1.8.4    2016-06-08 CRAN (R 3.3.0)
@@ -329,14 +331,14 @@ Session info and package versions
     ##  RColorBrewer           1.1-2    2014-12-07 CRAN (R 3.3.0)
     ##  Rcpp                   0.12.10  2017-03-19 CRAN (R 3.3.2)
     ##  RCurl                  1.95-4.8 2016-03-01 CRAN (R 3.3.0)
-    ##  readr                * 1.0.0    2016-08-03 CRAN (R 3.3.0)
-    ##  rmarkdown              1.3      2016-12-21 CRAN (R 3.3.2)
+    ##  readr                * 1.1.0    2017-03-22 CRAN (R 3.3.2)
+    ##  rmarkdown              1.4      2017-03-24 CRAN (R 3.3.2)
     ##  rprojroot              1.2      2017-01-16 CRAN (R 3.3.2)
     ##  Rsamtools            * 1.26.1   2016-10-22 Bioconductor  
     ##  S4Vectors            * 0.12.2   2017-03-18 Bioconductor  
     ##  scales                 0.4.1    2016-11-09 CRAN (R 3.3.2)
     ##  ShortRead            * 1.32.1   2017-03-18 Bioconductor  
-    ##  stringi                1.1.2    2016-10-01 CRAN (R 3.3.0)
+    ##  stringi                1.1.3    2017-03-21 CRAN (R 3.3.2)
     ##  stringr                1.2.0    2017-02-18 CRAN (R 3.3.2)
     ##  SummarizedExperiment * 1.4.0    2016-10-18 Bioconductor  
     ##  survival             * 2.41-2   2017-03-16 CRAN (R 3.3.2)

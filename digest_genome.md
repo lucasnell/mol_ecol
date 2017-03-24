@@ -12,22 +12,20 @@ Lucas Nell
 -   [Writing to fasta files](#writing-to-fasta-files)
 -   [Session info and package versions](#session-info-and-package-versions)
 
-*Updated 22 March 2017*
+*Updated 24 March 2017*
 
 In this script I perform in silico digestions of the aphid genome using multiple restriction enzymes. Once enzymes are chosen, I write the resulting fragments to fasta files.
 
 **Loading packages:**
 
 ``` r
-suppressPackageStartupMessages(
-    suppressWarnings({
+suppressPackageStartupMessages({
         library(SimRAD)
         library(dplyr)
         library(purrr)
         library(tidyr)
         library(ggplot2)
     })
-)
 ```
 
 *Note*: Installing `SimRAD` requires the following code:
@@ -45,15 +43,17 @@ Read genome
 
 This converts the compressed fasta file of the aphid genome to a single string containing the sequences in the file. (It should take ~20 seconds.)
 
+(See the `README.md` file for why I'm including `./genome_data/` in file paths.)
+
 ``` r
-genome_seq <- ref.DNAseq('aphid_genome.fa.gz', subselect.contigs = FALSE)
+genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', subselect.contigs = FALSE)
 ```
 
 If you want to test this script without using as much RAM or time, you can run the following code instead:
 
 ``` r
 set.seed(1)
-genome_seq <- ref.DNAseq('aphid_genome.fa.gz', prop.contigs = 0.1)
+genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', prop.contigs = 0.1)
 ```
 
 Make restriction enzyme data frame
@@ -252,8 +252,8 @@ Now I write each `DNAStringSet` object from `write_list` to a compressed fasta f
 
 ``` r
 for (enz in chosen_res) {
-    writeFasta(write_list[[enz]], file = sprintf('frags_%s.fa.gz', enz), mode = 'w',
-               compress = 'gzip')
+    writeFasta(write_list[[enz]], file = sprintf('./genome_data/frags_%s.fa.gz', enz), 
+               mode = 'w', compress = 'gzip')
     cat(sprintf('%s file finished', enz), '\n')
 }
 ```
@@ -264,13 +264,13 @@ Session info and package versions
     ## Session info --------------------------------------------------------------
 
     ##  setting  value                       
-    ##  version  R version 3.3.2 (2016-10-31)
+    ##  version  R version 3.3.3 (2017-03-06)
     ##  system   x86_64, darwin13.4.0        
     ##  ui       X11                         
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-03-22
+    ##  date     2017-03-24
 
     ## Packages ------------------------------------------------------------------
 
@@ -299,11 +299,11 @@ Session info and package versions
     ##  IRanges              * 2.8.2    2017-03-18 Bioconductor  
     ##  knitr                  1.15.1   2016-11-22 CRAN (R 3.3.2)
     ##  labeling               0.3      2014-08-23 CRAN (R 3.3.0)
-    ##  lattice                0.20-34  2016-09-06 CRAN (R 3.3.2)
+    ##  lattice                0.20-34  2016-09-06 CRAN (R 3.3.3)
     ##  latticeExtra           0.6-28   2016-02-09 CRAN (R 3.3.0)
     ##  lazyeval               0.2.0    2016-06-12 CRAN (R 3.3.0)
     ##  magrittr               1.5      2014-11-22 CRAN (R 3.3.0)
-    ##  Matrix                 1.2-8    2017-01-20 CRAN (R 3.3.2)
+    ##  Matrix                 1.2-8    2017-01-20 CRAN (R 3.3.3)
     ##  memoise                1.0.0    2016-01-29 CRAN (R 3.3.0)
     ##  munsell                0.4.3    2016-02-13 CRAN (R 3.3.0)
     ##  plyr                   1.8.4    2016-06-08 CRAN (R 3.3.0)
@@ -313,14 +313,14 @@ Session info and package versions
     ##  Rcpp                   0.12.10  2017-03-19 CRAN (R 3.3.2)
     ##  RCurl                  1.95-4.8 2016-03-01 CRAN (R 3.3.0)
     ##  reshape2               1.4.2    2016-10-22 CRAN (R 3.3.0)
-    ##  rmarkdown              1.3      2016-12-21 CRAN (R 3.3.2)
+    ##  rmarkdown              1.4      2017-03-24 CRAN (R 3.3.2)
     ##  rprojroot              1.2      2017-01-16 CRAN (R 3.3.2)
     ##  Rsamtools            * 1.26.1   2016-10-22 Bioconductor  
     ##  S4Vectors            * 0.12.2   2017-03-18 Bioconductor  
     ##  scales                 0.4.1    2016-11-09 CRAN (R 3.3.2)
     ##  ShortRead            * 1.32.1   2017-03-18 Bioconductor  
     ##  SimRAD               * 0.96     2016-01-06 CRAN (R 3.3.0)
-    ##  stringi                1.1.2    2016-10-01 CRAN (R 3.3.0)
+    ##  stringi                1.1.3    2017-03-21 CRAN (R 3.3.2)
     ##  stringr                1.2.0    2017-02-18 CRAN (R 3.3.2)
     ##  SummarizedExperiment * 1.4.0    2016-10-18 Bioconductor  
     ##  tibble                 1.2      2016-08-26 CRAN (R 3.3.0)
