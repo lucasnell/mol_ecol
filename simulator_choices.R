@@ -63,11 +63,11 @@ meta_data
 
 all_tables %>% 
     filter(
-        grepl('Illumina', Technology),
-        grepl('SE', Run_types),
-        PCR == 'Yes',
+        # grepl('Illumina', Technology),
+        # grepl('SE', Run_types),
+        # PCR == 'Yes',
         grepl('Mac', Operating_system),
-        Open_source == 'Yes',
+        # Open_source == 'Yes',
         SNPs == 'Yes'
         ) %>% 
     # select(-Technology, -Run_types, -PCR, -Operating_system, -Open_source, -SNPs) %>%
