@@ -8,34 +8,12 @@
 #' *Updated `r format(Sys.Date(), '%d %B %Y')`*
 #' 
 #' 
-#' Tables are from the following paper:
+#' Tables are from the following paper (link 
+#' [here](http://www.nature.com/nrg/journal/v17/n8/full/nrg.2016.57.html)):
 #' 
 #' Escalona, M., S. Rocha, and D. Posada. 2016. A comparison of tools for the simulation 
 #' of genomic next-generation sequencing data. *Nature Reviews Genetics* __17__:459–469.
 #' 
-#' $$p_i^{\prime} = \min(\{ \beta p_i, 1 \})$$
-#' 
-#' where 
-#' $\beta$ is the selected coefficient and
-#' $p_i$ is the probability density of fragment $i$.
-#' I treated whether fragment $i$ is sequenced as a Bernoulli trial with probability
-#' $p_i^{\prime}$.
-#' 
-#' The expected proportion selected ($\mathbb{E}(P)$) was calculated as such:
-#' 
-#' $\mathbb{E}(P) = $ 
-#' 
-#' <!---
-#' $\frac{\sum_{i=1}^{n} p_i^{\prime} }{n}$
-#' -->
-#' 
-#' ![Expected proportion](./size_filter_files/figure-markdown_github/expected_prop.pdf)
-#' 
-#' 
-#' 
-#' $$E(P) = n p_i^{\prime}$$
-#' 
-#' where $n$ is the total number of fragments.
 #' 
 #' 
 #' __Loading packages:__

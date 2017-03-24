@@ -13,7 +13,7 @@ Lucas Nell
 -   [Creating function to simulate size filtering](#creating-function-to-simulate-size-filtering)
 -   [Session info and package versions](#session-info-and-package-versions)
 
-*Updated 23 March 2017*
+*Updated 24 March 2017*
 
 This script accounts for the fact that in GBS, many potential cut sites are not sequenced, and that the disparity appears to be at least partially driven by fragment size. It tests and provides objects necessary to filter the digested fragments from the previous script (`digest_genome.R`).
 
@@ -172,19 +172,19 @@ dig_frag_df %>%
 
 If I did that for the other restriction enzymes, I would have to assume that the same proportion of fragments would be sequenced with them as with *ApeKI*. These restriction enzymes created longer average fragments than *ApeKI*, and we're assuming that fragment size is the primary determinant of whether a fragment is sequenced. Thus I decided not to use the sampling approach above.
 
-What I decided upon was to multiply the probability densities by a coefficient while limiting the new resulting probability to a maximum of 1:
+What I decided on was to multiply the probability densities by a coefficient while limiting the new resulting probability to a maximum of 1:
 
-*p*<sub>*i*</sub><sup>′</sup> = min({*β**p*<sub>*i*</sub>, 1})
+*p*<sub>*i*</sub><sup>′</sup> = min({*β* × *p*<sub>*i*</sub>, 1})
 
-where *β* is the selected coefficient and *p*<sub>*i*</sub> is the probability density of fragment *i*. I treated whether fragment *i* is sequenced as a Bernoulli trial with probability *p*<sub>*i*</sub><sup>′</sup>.
+where *β* is the selected coefficient and *p*<sub>*i*</sub> is the probability density of fragment *i*. I treated whether fragment *i* is sequenced as a Bernoulli trial with probability *p*<sub>*i*</sub><sup>′</sup>. The expected proportion of fragments sequenced (𝔼(*P*)) was calculated as the mean of all *p*<sub>*i*</sub><sup>′</sup> values.
 
-The expected proportion selected (𝔼(*P*)) was calculated as such:
-
-$${\\mathbb{E}}(P) = \\frac{\\sum\_{i=1}^{n} p\_i^{\\prime} }{n}$$
-
-where *n* is the total number of fragments.
-
-I tested multiple coefficients to find the one that minimized the absolute difference between the proportion of individuals we would predict would be selected from our data (i.e., 𝔼(*P*)) and the proportion sequenced from the maize data (*P*<sub>*m*</sub>).
+<!-- LaTeX version:
+\begin{align}
+\mathbb{E}(P) = \frac{\sum_{i=1}^{n} p_i^{\prime} }{n}
+\end{align}
+where $n$ is the total number of fragments.
+ -->
+I tested multiple coefficients to find the one that minimized the absolute difference between the proportion of individuals we would predict would be selected from our *ApeKI*-digested, aphid-genome fragments (i.e., 𝔼(*P*)) and the proportion sequenced from the maize data in Elshire et al. (2011; *P*<sub>*m*</sub>).
 
 ![](size_filter_files/figure-markdown_github/get_multiplier-1.png)
 
@@ -286,7 +286,7 @@ Session info and package versions
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-03-23
+    ##  date     2017-03-24
 
     ## Packages ------------------------------------------------------------------
 

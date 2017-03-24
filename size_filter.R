@@ -249,29 +249,35 @@ dig_frag_df <- lapply(.chosen_enz,
 #' assuming that fragment size is the primary determinant of whether a fragment is
 #' sequenced. Thus I decided not to use the sampling approach above.
 #' 
-#' What I decided upon was to multiply the probability densities by a coefficient while
+#' What I decided on was to multiply the probability densities by a coefficient while
 #' limiting the new resulting probability to a maximum of 1:
 #' 
-#' $$p_i^{\prime} = \min(\{ \beta p_i, 1 \})$$
+#' 
+#' $$p_i^{\prime} = \min(\{ \beta \times p_i, 1 \})$$
+#' 
 #' 
 #' where 
 #' $\beta$ is the selected coefficient and
 #' $p_i$ is the probability density of fragment $i$.
 #' I treated whether fragment $i$ is sequenced as a Bernoulli trial with probability
 #' $p_i^{\prime}$.
+#' The expected proportion of fragments sequenced ($\mathbb{E}(P)$) was calculated as the
+#' mean of all $p_i^{\prime}$ values.
 #' 
-#' The expected proportion selected ($\mathbb{E}(P)$) was calculated as such:
 #' 
-#' <!---
-#' $${\mathbb{E}}(P) = \frac{\sum_{i=1}^{n} p_i^{\prime} }{n}$$
-#' -->
-#' ![Expected proportion](.//)
 #' 
+#' <!-- LaTeX version:
+#' \begin{align}
+#' \mathbb{E}(P) = \frac{\sum_{i=1}^{n} p_i^{\prime} }{n}
+#' \end{align}
 #' where $n$ is the total number of fragments.
+#'  -->
+#' 
 #' 
 #' I tested multiple coefficients to find the one that minimized the absolute difference
 #' between the proportion of individuals we would predict would be selected from our 
-#' data (i.e., $\mathbb{E}(P)$) and the proportion sequenced from the maize data ($P_m$).
+#' *ApeKI*-digested, aphid-genome fragments (i.e., $\mathbb{E}(P)$) and the proportion
+#' sequenced from the maize data in Elshire et al. (2011; $P_m$).
 #' 
 #' 
 #' 

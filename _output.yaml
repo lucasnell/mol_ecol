@@ -3,3 +3,6 @@ github_document:
   toc_depth: 2
   fig_width: 8
   fig_height: 6
+pdf_document:
+  toc: true
+  number_sections: true

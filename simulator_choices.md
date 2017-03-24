@@ -5,28 +5,11 @@ Lucas Nell
 
 -   [Reading Excel sheets](#reading-excel-sheets)
 
-*Updated 23 March 2017*
+*Updated 24 March 2017*
 
-Tables are from the following paper:
+Tables are from the following paper (link [here](http://www.nature.com/nrg/journal/v17/n8/full/nrg.2016.57.html)):
 
 Escalona, M., S. Rocha, and D. Posada. 2016. A comparison of tools for the simulation of genomic next-generation sequencing data. *Nature Reviews Genetics* **17**:459–469.
-
-*p*<sub>*i*</sub><sup>′</sup> = min({*β**p*<sub>*i*</sub>, 1})
-
-where *β* is the selected coefficient and *p*<sub>*i*</sub> is the probability density of fragment *i*. I treated whether fragment *i* is sequenced as a Bernoulli trial with probability *p*<sub>*i*</sub><sup>′</sup>.
-
-The expected proportion selected (𝔼(*P*)) was calculated as such:
-
-$(P) = $
-
-<!---
-$\frac{\sum_{i=1}^{n} p_i^{\prime} }{n}$
--->
-![Expected proportion](./size_filter_files/figure-markdown_github/expected_prop.pdf)
-
-*E*(*P*)=*n**p*<sub>*i*</sub><sup>′</sup>
-
-where *n* is the total number of fragments.
 
 **Loading packages:**
 
