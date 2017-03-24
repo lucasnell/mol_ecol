@@ -16,15 +16,13 @@
 #' __Loading packages:__
 #' 
 #+ packages
-suppressPackageStartupMessages(
-    suppressWarnings({
+suppressPackageStartupMessages({
         library(SimRAD)
         library(dplyr)
         library(purrr)
         library(tidyr)
         library(ggplot2)
     })
-)
 #' 
 #' *Note*: Installing `SimRAD` requires the following code:
 #' 
@@ -42,8 +40,10 @@ suppressPackageStartupMessages(
 #' This converts the compressed fasta file of the aphid genome to a single string
 #' containing the sequences in the file. (It should take ~20 seconds.)
 #' 
+#' (See the `README.md` file for why I'm including `./genome_data/` in file paths.)
+#' 
 #+ make_genome
-genome_seq <- ref.DNAseq('aphid_genome.fa.gz', subselect.contigs = FALSE)
+genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', subselect.contigs = FALSE)
 #' 
 #' 
 #' If you want to test this script without using as much RAM or time, you can run the
@@ -51,7 +51,7 @@ genome_seq <- ref.DNAseq('aphid_genome.fa.gz', subselect.contigs = FALSE)
 #' 
 #' ```{r, eval = FALSE}
 #' set.seed(1)
-#' genome_seq <- ref.DNAseq('aphid_genome.fa.gz', prop.contigs = 0.1)
+#' genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', prop.contigs = 0.1)
 #' ```
 #' 
 #' 
@@ -248,8 +248,8 @@ invisible(gc(verbose = FALSE))
 #' 
 #+ write_fastas, eval = FALSE
 for (enz in chosen_res) {
-    writeFasta(write_list[[enz]], file = sprintf('frags_%s.fa.gz', enz), mode = 'w',
-               compress = 'gzip')
+    writeFasta(write_list[[enz]], file = sprintf('./genome_data/frags_%s.fa.gz', enz), 
+               mode = 'w', compress = 'gzip')
     cat(sprintf('%s file finished', enz), '\n')
 }
 #' 

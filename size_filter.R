@@ -21,8 +21,7 @@
 #' __Loading packages:__
 #' 
 #+ packages
-suppressPackageStartupMessages(
-    suppressWarnings({
+suppressPackageStartupMessages({
         library(fitdistrplus)
         library(tidyr)
         library(purrr)
@@ -31,7 +30,7 @@ suppressPackageStartupMessages(
         library(dplyr)
         library(magrittr)
         library(ShortRead)
-    }))
+    })
 #' 
 #' 
 #' 
@@ -198,11 +197,12 @@ frag_sizes %>%
 #' I now read the fasta files made in `digest_genome.R` that represent in silico 
 #' digestions of the aphid genome using three different restriction enzymes.
 #' 
+#' (See the `README.md` file for why I'm including `./genome_data/` in file paths.)
 #' 
 #+ read_dig_data
 .chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
 dig_frags <- lapply(setNames(.chosen_enz, .chosen_enz), function(enz) {
-    fasta <- readFasta(sprintf('frags_%s.fa.gz', enz))
+    fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))
     sread(fasta)
 })
 #' 
