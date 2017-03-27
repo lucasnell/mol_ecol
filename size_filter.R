@@ -2,7 +2,12 @@
 #' title: 'Filter digested fragments by size'
 #' author: 'Lucas Nell'
 #' date: '19 March 2017'
-#' output: github_document
+#' output: 
+#'   github_document:
+#'     toc: true
+#'     toc_depth: 2
+#'     fig_width: 8
+#'     fig_height: 6
 #' ---
 #' 
 #' *Updated `r format(Sys.Date(), '%d %B %Y')`*
