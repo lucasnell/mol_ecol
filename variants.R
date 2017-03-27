@@ -35,7 +35,7 @@ suppressPackageStartupMessages({
 #' 
 #' 
 #' 
-#' # Data to on which to base simulations
+#' # Data on which to base simulations
 #' 
 #' Reference:
 #' 
@@ -158,7 +158,58 @@ a_n <- function(n) {
 #' at segregating sites.
 #' 
 (seg_div <- (theta_pi * .n^2 / choose(.n, 2)) / seg_sites)
+#' 
+#' 
+#' 
+#' 
+#' # Functions to create 
+#' 
 
+fasta <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'NruI-HF')))
+# fasta[[1]] <- DNAString('AA')
+# DNAStringSet(c('AA', 'GG'))
+
+# get_seg_sites <- function(seq_lens, seg_sites)
+# }
+
+seq_num = 1
+.one_seq <- function(seq_num) {
+    system.time({seq_length <- seq_lens[seq_num]
+    samp_n <- length(rand_seqs[rand_seqs == seq_num])
+    ran_locs <- sample(1:seq_length, samp_n, replace = FALSE)})
+    return(ran_locs)
+}
+
+(0.057 * 40e3) / 60
+
+
+seq_lens <- width(fasta)
+total_seg <- round(sum(seq_lens) * seg_sites, 0)
+rand_seqs <- sort(sample(1:length(seq_lens), total_seg, replace = TRUE, prob = seq_lens))
+# rand_locs <- sapply(1:length(seq_lens), .one_seq)
+rand_locs <- lapply(1:40, .one_seq)
+
+
+# /////////////////////////////////////
+# /////////////////////////////////////
+
+# Left off: Above took a long time, so I moved onto filtering out areas not adjacent to 
+#           cut sites since this will reduce the fasta file sizes.
+
+# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+
+#' <!--- References for reading and writing fastas
+# dig_frags <- lapply(setNames(.chosen_enz, .chosen_enz), function(enz) {
+#     fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))
+#     sread(fasta)
+# })
+# writeFasta(write_list[[enz]], file = sprintf('./genome_data/frags_%s.fa.gz', enz), 
+#            mode = 'w', compress = 'gzip')
+# cat(sprintf('%s file finished', enz), '\n')
+#' -->
 
 
 
