@@ -29,6 +29,9 @@ suppressPackageStartupMessages({
     library(ShortRead)
 })
 #' 
+#+ set_theme, echo = FALSE
+# This sets the default ggplot theme
+theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 #' 
 #' 
 #' 

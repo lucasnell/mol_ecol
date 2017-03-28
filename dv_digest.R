@@ -29,6 +29,10 @@ suppressPackageStartupMessages({
         library(ggplot2)
     })
 #' 
+#+ set_theme, echo = FALSE
+# This sets the default ggplot theme
+theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
+#' 
 #' *Note*: Installing `SimRAD` requires the following code:
 #' 
 #' ```{r install_SimRAD, eval = FALSE}
@@ -166,8 +170,8 @@ re_df <- re_df %>%
 #' 
 #+ make_seq_p
 seq_p <- 654998 / 2.1e6
-
-
+#' 
+#' 
 #' 
 #' ### Digestion summary
 #' 
@@ -175,19 +179,19 @@ seq_p <- 654998 / 2.1e6
 #' sites get sequenced:
 #'  
 #+ dig_summary, echo = FALSE
-z <- apply(re_df, 1, 
-           function(i){
-               dig_i <- i$digest
-               name_i <- i$enzyme
-               loci_density_i <- seq_p * length(dig_i) / (nchar(genome_seq) / 1e6)
-               loci_total_i <- seq_p * length(dig_i)
-               cat('---   ', name_i, '   ----\n')
-               cat(sprintf('Loci per Mbp = %.2f', loci_density_i), '\n')
-               cat(sprintf('Total loci = %s', 
-                           format(loci_total_i, big.mark = ',', 
-                                  digits = 0, scientific = FALSE)), '\n\n')
-               return(NULL)
-           }); rm(z)
+invisible(apply(re_df, 1, 
+                function(i){
+                    dig_i <- i$digest
+                    name_i <- i$enzyme
+                    loci_density_i <- seq_p * length(dig_i) / (nchar(genome_seq) / 1e6)
+                    loci_total_i <- seq_p * length(dig_i)
+                    cat('---   ', name_i, '   ----\n')
+                    cat(sprintf('Loci per Mbp = %.2f', loci_density_i), '\n')
+                    cat(sprintf('Total loci = %s', 
+                                format(loci_total_i, big.mark = ',', 
+                                       digits = 0, scientific = FALSE)), '\n\n')
+                    return(NULL)
+                }))
 #' 
 #' 
 #' # Choosing enzymes and visualizing fragment sizes
@@ -210,9 +214,7 @@ plot_df <- re_df %>%
     mutate(enzyme = factor(enzyme, levels = chosen_res))
 plot_df %>% 
     ggplot(aes(frag_len / 1e3)) +
-    theme_classic() +
-    theme(strip.background = element_blank(), 
-          strip.text = element_text(size = 14, face = 'bold.italic')) +
+    theme(strip.text = element_text(size = 14, face = 'bold.italic')) +
     geom_histogram(aes(y = ..density.., fill = enzyme), bins = 100) +
     facet_grid(enzyme ~ ., scales = 'free') +
     ylab('Density') +

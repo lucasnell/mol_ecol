@@ -28,14 +28,18 @@ suppressPackageStartupMessages({
     library(dplyr)
     library(readxl)
 })
-
+#' 
+#+ set_theme, echo = FALSE
+# This sets the default ggplot theme
+theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 #' 
 #' ## Reading Excel sheets
 #' 
 
 sheet_names <- c(paste0('table', 2:4), paste0('tab', 2:4, '_meta'))
 
-sheet_list <- lapply(sheet_names, function(sh) read_excel('ngs_simulators.xlsx', sh))
+sheet_list <- lapply(sheet_names, 
+                     function(sh) read_excel('./bg_data/ngs_simulators.xlsx', sh))
 
 meta_data <- bind_rows(sheet_list[4:6]) %>% 
     arrange(abbrev) %>% 

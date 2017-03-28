@@ -37,6 +37,9 @@ suppressPackageStartupMessages({
         library(ShortRead)
     })
 #' 
+#+ set_theme, echo = FALSE
+# This sets the default ggplot theme
+theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 #' 
 #' 
 #' 
@@ -85,7 +88,7 @@ rounded_p <- function(vec, round_digits = 4) {
 #' to 4 digits while having the summed proportions still add up to 1.
 #' 
 #+ frag_sizes_df
-frag_sizes <- read_csv('frag_sizes.csv', col_types = 'cd') %>% 
+frag_sizes <- read_csv('./bg_data/frag_sizes.csv', col_types = 'cd') %>% 
     mutate(size = as.integer(rep(seq(50, 1000, 50), each = 2)),
            type = rep(c('predicted', 'sequenced'), 1000 / 50)) %>% 
     select(size, type, prop) %>% 
@@ -105,7 +108,6 @@ frag_sizes %>%
     ggplot(aes(size - 25, prop)) + 
     geom_bar(aes(fill = type), stat = 'identity', width = 45,
              position = position_dodge(width = 30)) +
-    theme_classic() +
     scale_fill_manual(NULL, values = c('dodgerblue', 'red')) +
     theme(legend.position = c(0.75, 0.75)) +
     scale_x_continuous('Fragment size (bp)', breaks = seq(0, 1000, 50),
@@ -177,7 +179,6 @@ frag_sizes %>%
     ggplot(aes(y = prop)) + 
     geom_bar(aes(size - 25), stat = 'identity', position = 'dodge', 
              fill = 'dodgerblue') +
-    theme_classic() + 
     geom_line(data = data_frame(size = 1:1000, prop = .prob_dens(size)) %>% 
                   mutate(prop = max(frag_sizes$prop) * prop / max(prop)),
               aes(size), size = 0.75) +
@@ -297,7 +298,6 @@ test_m_ <- sapply(test_seq_,
                                       .seq_p))
 par(mar = c(5, 4.5, 1, 1))
 ggplot(data = NULL, aes(test_seq_, test_m_)) +
-    theme_classic() +
     geom_line(size = 1, color = 'dodgerblue') +
     geom_point(aes(test_seq_[test_m_ == min(test_m_)], 
                    test_m_[test_m_ == min(test_m_)]), shape = 1, size = 3) + 
