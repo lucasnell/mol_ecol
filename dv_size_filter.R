@@ -16,26 +16,26 @@
 #' This script accounts for the fact that in GBS, many potential cut sites are not 
 #' sequenced, and that the disparity appears to be at least partially driven by fragment
 #' size.
-#' It tests and provides objects necessary to filter the digested fragments from the
-#' previous script (`digest_genome.R`).
+#' I provide here the rationale for the objects in 
+#' [`wr_size_filter.R`](./wr_size_filter.R) that filter digested fragments based on 
+#' fragment size.
 #' 
-#' __Note:__ This script is not intended to be `source`d. The objects from this script
-#' that are necessary for downstream analyses are saved in the `filter_objs.RData` file.
+#' 
 #' 
 #' 
 #' __Loading packages:__
 #' 
 #+ packages
 suppressPackageStartupMessages({
-        library(fitdistrplus)
-        library(tidyr)
-        library(purrr)
-        library(readr)
-        library(ggplot2)
-        library(dplyr)
-        library(magrittr)
-        library(ShortRead)
-    })
+    library(fitdistrplus)
+    library(tidyr)
+    library(purrr)
+    library(readr)
+    library(ggplot2)
+    library(dplyr)
+    library(magrittr)
+    library(ShortRead)
+})
 #' 
 #+ set_theme, echo = FALSE
 # This sets the default ggplot theme

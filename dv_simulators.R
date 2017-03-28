@@ -29,23 +29,22 @@ suppressPackageStartupMessages({
     library(readxl)
 })
 #' 
-#+ set_theme, echo = FALSE
-# This sets the default ggplot theme
-theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 #' 
 #' ## Reading Excel sheets
 #' 
-
 sheet_names <- c(paste0('table', 2:4), paste0('tab', 2:4, '_meta'))
-
 sheet_list <- lapply(sheet_names, 
                      function(sh) read_excel('./bg_data/ngs_simulators.xlsx', sh))
-
+#' 
+#' Joining together metadata tables:
+#' 
 meta_data <- bind_rows(sheet_list[4:6]) %>% 
     arrange(abbrev) %>% 
     as.data.frame
 
-# Joining all tables together (not including metadata):
+#' 
+#' Joining all other tables together:
+#' 
 all_tables <- left_join(sheet_list[[1]], sheet_list[[2]], by = 'Simulators') %>% 
     left_join(., sheet_list[[3]], by = 'Simulators') %>% 
     arrange(Simulators) %>% 
@@ -64,43 +63,54 @@ all_tables <- left_join(sheet_list[[1]], sheet_list[[2]], by = 'Simulators') %>%
             'SNPs'
         )
     )
-
-
-
-
-meta_data
-
+#' 
+#' 
+#' Abbreviations for some of the `all_tables` column names:
+#' 
+meta_data %>% filter(abbrev %in% c(colnames(all_tables), 'RE'))
+#' 
+#' 
+#' 
+#' # Choosing a simulator
+#' 
+#' 
+#' I need it to do the following:
+#' 
+#' * Work on a Mac
+#' * Simulate single-end, Illumina reads
+#' * Simulate the PCR step
+#' * Be open source
+#' 
+#' I would also like it to simulate SNPs from a reference genome, so I'll do this 
+#' filtering here:
+#' 
 all_tables %>% 
     filter(
-        # grepl('Illumina', Technology),
-        # grepl('SE', Run_types),
-        # PCR == 'Yes',
+        grepl('Illumina', Technology),
+        grepl('SE', Run_types),
+        PCR == 'Yes',
         grepl('Mac', Operating_system),
-        # Open_source == 'Yes',
+        Open_source == 'Yes',
         SNPs == 'Yes'
         ) %>% 
-    # select(-Technology, -Run_types, -PCR, -Operating_system, -Open_source, -SNPs) %>%
-    # select(Simulators) %>%
-    as.data.frame
-
-# For filtering by just one at a time:
-eval_list <- list(
-    illumina = expression(grepl('Illumina', Technology)),
-    single_end = expression(grepl('SE', Run_types)),
-    pcr = expression(PCR == 'Yes'),
-    mac = expression(grepl('Mac', Operating_system)),
-    open = expression(Open_source == 'Yes'),
-    snps = expression(SNPs == 'Yes')
-)
-
-with(all_tables, filter(all_tables, eval(eval_list[['pcr']]))) %>% as.data.frame
-
-with(all_tables, filter(all_tables, eval(eval_list[['snps']]))) %>% as.data.frame
-
-
-
-
-
-
-
-
+    select(Simulators)
+#' 
+#' 
+#' When I tried out Grinder, it was not very intuitive, especially the SNPs part, so I
+#' decided to remove that filter:
+#' 
+all_tables %>% 
+    filter(
+        grepl('Illumina', Technology),
+        grepl('SE', Run_types),
+        PCR == 'Yes',
+        grepl('Mac', Operating_system),
+        Open_source == 'Yes'
+    ) %>% 
+    select(Simulators)
+#' 
+#' 
+#' This includes the ART simulator. I will use this one for read simulation, and 
+#' generate SNPs myself.
+#' 
+#' 

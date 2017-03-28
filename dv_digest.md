@@ -9,23 +9,22 @@ Lucas Nell
     -   [Accounting for missing data](#accounting-for-missing-data)
     -   [Digestion summary](#digestion-summary)
 -   [Choosing enzymes and visualizing fragment sizes](#choosing-enzymes-and-visualizing-fragment-sizes)
--   [Writing to fasta files](#writing-to-fasta-files)
 -   [Session info and package versions](#session-info-and-package-versions)
 
-*Updated 24 March 2017*
+*Updated 28 March 2017*
 
-In this script I perform in silico digestions of the aphid genome using multiple restriction enzymes. Once enzymes are chosen, I write the resulting fragments to fasta files.
+In this script I perform in silico digestions of the aphid genome using multiple restriction enzymes. The goal here is to figure out which enzymes to use for simulations. See [`wr_digest.R`](./wr_digest.R) for working R objects created from this script that are used for downstream processes.
 
 **Loading packages:**
 
 ``` r
 suppressPackageStartupMessages({
-        library(SimRAD)
-        library(dplyr)
-        library(purrr)
-        library(tidyr)
-        library(ggplot2)
-    })
+    library(SimRAD)
+    library(dplyr)
+    library(purrr)
+    library(tidyr)
+    library(ggplot2)
+})
 ```
 
 *Note*: Installing `SimRAD` requires the following code:
@@ -41,19 +40,19 @@ install.packages('SimRAD')
 Read genome
 ===========
 
-This converts the compressed fasta file of the aphid genome to a single string containing the sequences in the file. (It should take ~20 seconds.)
+This converts the compressed fasta file of the aphid genome to a single string containing a randomly chosen 10% of the sequences in the file. I'm using only 10% for testing because using all sequences takes a long time and uses a lot of memory.
 
-(See the `README.md` file for why I'm including `./genome_data/` in file paths.)
+(See the [`README.md`](./README.md) file for why I'm including `./genome_data/` in file paths.)
+
+``` r
+set.seed(63)
+genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', prop.contigs = 0.1)
+```
+
+If you're more patient than me and want to test this script on the entire genome, you can run the following code instead:
 
 ``` r
 genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', subselect.contigs = FALSE)
-```
-
-If you want to test this script without using as much RAM or time, you can run the following code instead:
-
-``` r
-set.seed(1)
-genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', prop.contigs = 0.1)
 ```
 
 Make restriction enzyme data frame
@@ -78,7 +77,7 @@ Here is a table of the restriction enzymes considered and their restriction-site
 Below is a data frame of the above table:
 
 ``` r
-re_df <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI', 'AscI', 
+enz_df <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI', 'AscI', 
                                'BspEI', 'AclI', 'FspI', 'MluI-HF', 'NruI-HF'),
                     sites = list(c('G', 'CAGC', 'G', 'CTGC'), c('CCTGCA', 'GG'),
                                  c('CTGCA', 'G'), c('ATGCA', 'T'), c('TT', 'CGAA'), 
@@ -102,7 +101,7 @@ Digest genome
 This function runs an in silico digestion of the genome, given an enzyme's site sequences as a character vector:
 
 ``` r
-digest_enzyme <- function(enzyme_sites, dna_seq = genome_seq) {
+digest_genome <- function(enzyme_sites, dna_seq = genome_seq) {
     if (is.list(enzyme_sites)) {
         enzyme_sites <- enzyme_sites[[1]]
     }
@@ -124,11 +123,11 @@ digest_enzyme <- function(enzyme_sites, dna_seq = genome_seq) {
 }
 ```
 
-Running that on all digestion enzymes in `re_df` (**Warning:** this takes ~ 4.5 minutes and can use &gt; 4GB RAM):
+Running that on all digestion enzymes in `enz_df`:
 
 ``` r
-re_df <- re_df %>% 
-    mutate(digest = lapply(sites, digest_enzyme))
+enz_df <- enz_df %>% 
+    mutate(digest = lapply(sites, digest_genome))
 ```
 
 ### Accounting for missing data
@@ -148,24 +147,24 @@ seq_p <- 654998 / 2.1e6
 Printing summary of each digestion, where all numbers assume `seq_p` proportion of sites get sequenced:
 
     ## ---    ApeKI    ----
-    ## Loci per Mbp = 183.12 
-    ## Total loci = 99,192 
+    ## Loci per Mbp = 180.38 
+    ## Total loci = 112,104 
     ## 
     ## ---    BstBI    ----
-    ## Loci per Mbp = 78.11 
-    ## Total loci = 42,312 
+    ## Loci per Mbp = 77.32 
+    ## Total loci = 48,052 
     ## 
     ## ---    AclI    ----
-    ## Loci per Mbp = 93.02 
-    ## Total loci = 50,386 
+    ## Loci per Mbp = 93.15 
+    ## Total loci = 57,892 
     ## 
     ## ---    MluI-HF    ----
-    ## Loci per Mbp = 48.41 
-    ## Total loci = 26,224 
+    ## Loci per Mbp = 47.31 
+    ## Total loci = 29,403 
     ## 
     ## ---    NruI-HF    ----
-    ## Loci per Mbp = 23.08 
-    ## Total loci = 12,503
+    ## Loci per Mbp = 23.35 
+    ## Total loci = 14,510
 
 Choosing enzymes and visualizing fragment sizes
 ===============================================
@@ -178,85 +177,7 @@ chosen_res <- c('ApeKI', 'BstBI', 'NruI-HF')
 
 Below are histograms of the fragment sizes for the genome digested with each enzyme.
 
-![](digest_genome_files/figure-markdown_github/plot_frag_sizes-1.png)
-
-Writing to fasta files
-======================
-
-The `DNAStringSet` function is from the `Biostrings` package, and `writeFasta` is from the `ShortRead` package. Both of these packages should already be loaded from by `SimRAD`.
-
-The below code makes a list of `DNAStringSet` objects with individual sequence names set to `seq_X`, where `X` goes from 1 to the number of sequences.
-
-``` r
-write_list <- re_df %>% 
-    filter(enzyme %in% chosen_res) %>% 
-    split(.$enzyme) %>% 
-    map(~ DNAStringSet(.x$digest[[1]])) %>% 
-    map(~ magrittr::set_names(.x, paste0('seq_', 1:length(.x))))
-write_list
-```
-
-    ## $ApeKI
-    ##   A DNAStringSet instance of length 318022
-    ##          width seq                                     names               
-    ##      [1]   135 TTTACAATTGCTATTGTA...AATGACAATGTCCGTAAG seq_1
-    ##      [2]  2325 CAGCTCAAAAAGAGTCAA...AGATATTTTACCATTTGG seq_2
-    ##      [3]  4189 CTGCTTTTTTTAAAATAA...TGGCGCAACTGGTGTTTG seq_3
-    ##      [4]  1122 CAGCAGGCGTGAACAAGG...CCGTGAACCCTGTCCAGG seq_4
-    ##      [5]   880 CAGCGGCGGCGTCGTTTG...CGGCCGTCTCACGCGTCG seq_5
-    ##      ...   ... ...
-    ## [318018]    51 CAGCGGCTGATCTCCAAA...ACCGATCCTTTTCTGCGG seq_318018
-    ## [318019]    15 CTGCCGCAAGTATCG                         seq_318019
-    ## [318020]  1628 CTGCTGCAAGCCATATTT...AGGGATCCTTGTCTTGAG seq_318020
-    ## [318021]  1711 CTGCATTGTTTTTCTTTA...CATGTTTTTTGGCACGGG seq_318021
-    ## [318022]  3124 CAGCTGTACGTTGCCAGT...GTATAGGACTAGCTCTCC seq_318022
-    ## 
-    ## $BstBI
-    ##   A DNAStringSet instance of length 135656
-    ##           width seq                                    names               
-    ##      [1]   3698 TTTACAATTGCTATTGTA...AAAAAAAATACTTATTT seq_1
-    ##      [2]   2224 CGAATATCATAATCAAAG...AAAAATAAAAATAATTT seq_2
-    ##      [3]   3181 CGAATAACCAAGTAGTCG...TCGTATCGTCGGTGGTT seq_3
-    ##      [4]    544 CGAAGTGATTTTTTTCGT...TTATTCAGACTACTTTT seq_4
-    ##      [5]    849 CGAAAAATAATTTTTATT...AATAGTATAATTATTTT seq_5
-    ##      ...    ... ...
-    ## [135652]   1931 CGAACGTTTGACTTTTAA...TCGTCTTTACCTCAGTT seq_135652
-    ## [135653]   8153 CGAAATAATAATAATAGC...AGTTGACTGCAAACTTT seq_135653
-    ## [135654]   1155 CGAAACAACATTATACTA...TATTTTTATAATTTTTT seq_135654
-    ## [135655]   4236 CGAAAAATATTAATGTAA...AAAAGTATAACATTTTT seq_135655
-    ## [135656]    198 CGAAAAACGTTTTAAAAC...TATAGGACTAGCTCTCC seq_135656
-    ## 
-    ## $`NruI-HF`
-    ##   A DNAStringSet instance of length 40087
-    ##          width seq                                     names               
-    ##     [1]   8222 TTTACAATTGCTATTGTA...TCACCCGCGTCTCTATCG seq_1
-    ##     [2]  14601 CGAGCTCTATCTCCCCTA...CCGAAATGACCGGTTTCG seq_2
-    ##     [3]  19034 CGATCGACTGTGGGCAAT...AGTGACACGATTAGATCG seq_3
-    ##     [4]  23487 CGAATGCATAAAGTCACA...TAACGTACCTAGGTATCG seq_4
-    ##     [5]   2755 CGATGTTATGGAATCTTT...GTTGTTCTACATTGATCG seq_5
-    ##     ...    ... ...
-    ## [40083]   7384 CGACACATTTTGTCCCCC...GAAATCCGATTTGTTTCG seq_40083
-    ## [40084]   3454 CGAATTGGGTGGACAGAA...CAATGTAACATTTTATCG seq_40084
-    ## [40085]  17769 CGAGATCAACGTTCATGA...TACAAAAACAGTTTATCG seq_40085
-    ## [40086]  16651 CGAGTCAAAAAGGTTGAT...TGTTTTCCACCAATTTCG seq_40086
-    ## [40087]   8128 CGACGAGCACAAGTAGGA...GTATAGGACTAGCTCTCC seq_40087
-
-To save some RAM before writing, I'm going to dump two large objects:
-
-``` r
-rm(re_df, genome_seq)
-invisible(gc(verbose = FALSE))
-```
-
-Now I write each `DNAStringSet` object from `write_list` to a compressed fasta file (this took ~5.5 mins on my computer):
-
-``` r
-for (enz in chosen_res) {
-    writeFasta(write_list[[enz]], file = sprintf('./genome_data/frags_%s.fa.gz', enz), 
-               mode = 'w', compress = 'gzip')
-    cat(sprintf('%s file finished', enz), '\n')
-}
-```
+![](dv_digest_files/figure-markdown_github/plot_frag_sizes-1.png)
 
 Session info and package versions
 =================================
@@ -270,7 +191,7 @@ Session info and package versions
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-03-24
+    ##  date     2017-03-28
 
     ## Packages ------------------------------------------------------------------
 

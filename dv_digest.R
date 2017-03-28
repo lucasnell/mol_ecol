@@ -15,19 +15,22 @@
 #' 
 #' In this script I perform in silico digestions of the aphid genome using multiple 
 #' restriction enzymes.
-#' Once enzymes are chosen, I write the resulting fragments to fasta files.
+#' The goal here is to figure out which enzymes to use for simulations.
+#' See [`wr_digest.R`](./wr_digest.R) for working R objects created from this script 
+#' that are used for downstream processes.
+#' 
 #' 
 #' 
 #' __Loading packages:__
 #' 
 #+ packages
 suppressPackageStartupMessages({
-        library(SimRAD)
-        library(dplyr)
-        library(purrr)
-        library(tidyr)
-        library(ggplot2)
-    })
+    library(SimRAD)
+    library(dplyr)
+    library(purrr)
+    library(tidyr)
+    library(ggplot2)
+})
 #' 
 #+ set_theme, echo = FALSE
 # This sets the default ggplot theme
@@ -47,20 +50,23 @@ theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 #' # Read genome
 #' 
 #' This converts the compressed fasta file of the aphid genome to a single string
-#' containing the sequences in the file. (It should take ~20 seconds.)
+#' containing a randomly chosen 10% of the sequences in the file.
+#' I'm using only 10% for testing because using all sequences takes a long time and 
+#' uses a lot of memory.
 #' 
-#' (See the `README.md` file for why I'm including `./genome_data/` in file paths.)
+#' (See the [`README.md`](./README.md) file for why I'm including `./genome_data/` in 
+#' file paths.)
 #' 
 #+ make_genome
-genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', subselect.contigs = FALSE)
+set.seed(63)
+genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', prop.contigs = 0.1)
 #' 
 #' 
-#' If you want to test this script without using as much RAM or time, you can run the
-#' following code instead:
+#' If you're more patient than me and want to test this script on the entire genome, 
+#' you can run the following code instead:
 #' 
 #' ```{r, eval = FALSE}
-#' set.seed(1)
-#' genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', prop.contigs = 0.1)
+#' genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', subselect.contigs = FALSE)
 #' ```
 #' 
 #' 
@@ -91,8 +97,8 @@ knitr::kable(disp_mat, format = 'markdown', row.names = FALSE, escape = TRUE,
 #' 
 #' Below is a data frame of the above table:
 #' 
-#+ make_re_df
-re_df <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI', 'AscI', 
+#+ make_enz_df
+enz_df <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI', 'AscI', 
                                'BspEI', 'AclI', 'FspI', 'MluI-HF', 'NruI-HF'),
                     sites = list(c('G', 'CAGC', 'G', 'CTGC'), c('CCTGCA', 'GG'),
                                  c('CTGCA', 'G'), c('ATGCA', 'T'), c('TT', 'CGAA'), 
@@ -125,7 +131,7 @@ re_df <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI', 'Asc
 #' sequences as a character vector:
 #' 
 #+ digest_function
-digest_enzyme <- function(enzyme_sites, dna_seq = genome_seq) {
+digest_genome <- function(enzyme_sites, dna_seq = genome_seq) {
     if (is.list(enzyme_sites)) {
         enzyme_sites <- enzyme_sites[[1]]
     }
@@ -149,12 +155,11 @@ digest_enzyme <- function(enzyme_sites, dna_seq = genome_seq) {
 
 
 #' 
-#' Running that on all digestion enzymes in `re_df` (__Warning:__ this takes ~ 4.5 
-#' minutes and can use > 4GB RAM):
+#' Running that on all digestion enzymes in `enz_df`:
 #' 
 #+ run_digest
-re_df <- re_df %>% 
-    mutate(digest = lapply(sites, digest_enzyme))
+enz_df <- enz_df %>% 
+    mutate(digest = lapply(sites, digest_genome))
 
 #' 
 #' ### Accounting for missing data
@@ -179,12 +184,12 @@ seq_p <- 654998 / 2.1e6
 #' sites get sequenced:
 #'  
 #+ dig_summary, echo = FALSE
-invisible(apply(re_df, 1, 
+invisible(apply(enz_df, 1, 
                 function(i){
                     dig_i <- i$digest
                     name_i <- i$enzyme
                     loci_density_i <- seq_p * length(dig_i) / (nchar(genome_seq) / 1e6)
-                    loci_total_i <- seq_p * length(dig_i)
+                    loci_total_i <- seq_p * length(dig_i) * 10
                     cat('---   ', name_i, '   ----\n')
                     cat(sprintf('Loci per Mbp = %.2f', loci_density_i), '\n')
                     cat(sprintf('Total loci = %s', 
@@ -207,7 +212,7 @@ chosen_res <- c('ApeKI', 'BstBI', 'NruI-HF')
 #' Below are histograms of the fragment sizes for the genome digested with each enzyme.
 #' 
 #+ plot_frag_sizes, echo = FALSE
-plot_df <- re_df %>% 
+plot_df <- enz_df %>% 
     filter(enzyme %in% chosen_res) %>% 
     split(.$enzyme) %>% 
     map_df(~ data_frame(enzyme = .x$enzyme, frag_len = nchar(.x$digest[[1]]))) %>% 
@@ -220,45 +225,9 @@ plot_df %>%
     ylab('Density') +
     scale_x_log10('Fragment length (Kbp)', breaks = c(0.1, 1, 10, 50)) +
     scale_fill_manual(values = c('#66c2a5','#fc8d62','#8da0cb'), guide = FALSE)
-rm(plot_df); invisible(gc(verbose = FALSE))
 #' 
 #' 
 #' 
-#' 
-#' 
-#' # Writing to fasta files
-#' 
-#' The `DNAStringSet` function is from the `Biostrings` package, and `writeFasta` is
-#' from the `ShortRead` package. Both of these packages should already be loaded from
-#' by `SimRAD`.
-#' 
-#' The below code makes a list of `DNAStringSet` objects with individual sequence names 
-#' set to `seq_X`, where `X` goes from 1 to the number of sequences.
-#' 
-#+ make_write_list
-write_list <- re_df %>% 
-    filter(enzyme %in% chosen_res) %>% 
-    split(.$enzyme) %>% 
-    map(~ DNAStringSet(.x$digest[[1]])) %>% 
-    map(~ magrittr::set_names(.x, paste0('seq_', 1:length(.x))))
-write_list
-#' 
-#' To save some RAM before writing, I'm going to dump two large objects:
-#+ dump_objs
-rm(re_df, genome_seq)
-invisible(gc(verbose = FALSE))
-#' 
-#' 
-#' 
-#' Now I write each `DNAStringSet` object from `write_list` to a compressed fasta file 
-#' (this took ~5.5 mins on my computer):
-#' 
-#+ write_fastas, eval = FALSE
-for (enz in chosen_res) {
-    writeFasta(write_list[[enz]], file = sprintf('./genome_data/frags_%s.fa.gz', enz), 
-               mode = 'w', compress = 'gzip')
-    cat(sprintf('%s file finished', enz), '\n')
-}
 #' 
 #' 
 #' # Session info and package versions
