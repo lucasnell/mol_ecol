@@ -83,17 +83,8 @@ enz_df <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI', 'As
                                  c('CTGCA', 'G'), c('ATGCA', 'T'), c('TT', 'CGAA'), 
                                  c('GG', 'CGCGCC'), c('T', 'CCGGA'), c('AA', 'CGTT'), 
                                  c('TGC', 'GCA'), c('A', 'CGCGT'), c('TCG','CGA'))) %>% 
-    filter(!enzyme %in% c('SbfI', 'PstI', 'EcoT22I', 'AscI', 'BspEI', 'FspI'))
+    arrange(enzyme)
 ```
-
-The restriction enzymes below were filtered out (reasons and link to referencing site follow):
-
--   *SbfI*: Not blocked by CpG methylase ([link](https://www.neb.com/products/r0642-sbfi))
--   *PstI*: Not blocked by CpG methylase ([link](https://www.neb.com/products/r0140-psti))
--   *EcoT22I*: "... not sensitive to dam, dcm, or CG methylation" ([link](https://tools.thermofisher.com/content/sfs/manuals/15240501.pdf))
--   *AscI*: "AscI is strongly inhibited by NaCl and ammonium acetate" ([link](https://www.neb.com/products/r0558-asci))
--   *BspEI*: Only impaired by CpG methylase ([link](https://www.neb.com/products/r0540-bspei))
--   *FspI*: "Ligation is 25%–75%." ([link](https://www.neb.com/products/r0135-fspi))
 
 Digest genome
 =============
@@ -146,17 +137,33 @@ seq_p <- 654998 / 2.1e6
 
 Printing summary of each digestion, where all numbers assume `seq_p` proportion of sites get sequenced:
 
+    ## ---    AclI    ----
+    ## Loci per Mbp = 93.15 
+    ## Total loci = 57,892 
+    ## 
     ## ---    ApeKI    ----
     ## Loci per Mbp = 180.38 
     ## Total loci = 112,104 
+    ## 
+    ## ---    AscI    ----
+    ## Loci per Mbp = 0.62 
+    ## Total loci = 384 
+    ## 
+    ## ---    BspEI    ----
+    ## Loci per Mbp = 19.57 
+    ## Total loci = 12,161 
     ## 
     ## ---    BstBI    ----
     ## Loci per Mbp = 77.32 
     ## Total loci = 48,052 
     ## 
-    ## ---    AclI    ----
-    ## Loci per Mbp = 93.15 
-    ## Total loci = 57,892 
+    ## ---    EcoT22I    ----
+    ## Loci per Mbp = 105.00 
+    ## Total loci = 65,257 
+    ## 
+    ## ---    FspI    ----
+    ## Loci per Mbp = 27.01 
+    ## Total loci = 16,787 
     ## 
     ## ---    MluI-HF    ----
     ## Loci per Mbp = 47.31 
@@ -164,15 +171,23 @@ Printing summary of each digestion, where all numbers assume `seq_p` proportion 
     ## 
     ## ---    NruI-HF    ----
     ## Loci per Mbp = 23.35 
-    ## Total loci = 14,510
+    ## Total loci = 14,510 
+    ## 
+    ## ---    PstI    ----
+    ## Loci per Mbp = 59.82 
+    ## Total loci = 37,176 
+    ## 
+    ## ---    SbfI    ----
+    ## Loci per Mbp = 1.84 
+    ## Total loci = 1,142
 
 Choosing enzymes and visualizing fragment sizes
 ===============================================
 
-From the summary above, I'll use *ApeKI* as a common restriction enzyme, *BstBI* as intermediate, and *NruI-HF* as rare.
+From the summary above (and because all the following enzymes have overhangs), I'll use *ApeKI* as a common restriction enzyme, *BstBI* as intermediate, and *BspEI* as rare.
 
 ``` r
-chosen_res <- c('ApeKI', 'BstBI', 'NruI-HF')
+chosen_enz <- c('ApeKI', 'BstBI', 'BspEI')
 ```
 
 Below are histograms of the fragment sizes for the genome digested with each enzyme.

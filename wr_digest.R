@@ -6,7 +6,7 @@
 if(!'.preamble_sourced' %in% ls(all.names = TRUE)) source('wr_preamble.R')
 
 # This object stores the restriction enzymes I chose to test:
-chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
+chosen_enz <- c('ApeKI', 'BstBI', 'BspEI')
 
 
 # This function digests a genome (as a DNAStringSet object) using one of the 

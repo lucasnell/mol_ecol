@@ -104,25 +104,13 @@ enz_df <- data_frame(enzyme = c('ApeKI', 'SbfI', 'PstI', 'EcoT22I', 'BstBI', 'As
                                  c('CTGCA', 'G'), c('ATGCA', 'T'), c('TT', 'CGAA'), 
                                  c('GG', 'CGCGCC'), c('T', 'CCGGA'), c('AA', 'CGTT'), 
                                  c('TGC', 'GCA'), c('A', 'CGCGT'), c('TCG','CGA'))) %>% 
-    filter(!enzyme %in% c('SbfI', 'PstI', 'EcoT22I', 'AscI', 'BspEI', 'FspI'))
+    arrange(enzyme)
 #' 
 #' 
 #' 
-#' The restriction enzymes below were filtered out (reasons and link to referencing site 
-#' follow):
 #' 
-#' - *SbfI*: Not blocked by CpG methylase
-#'   ([link](https://www.neb.com/products/r0642-sbfi))
-#' - *PstI*: Not blocked by CpG methylase
-#'   ([link](https://www.neb.com/products/r0140-psti))
-#' - *EcoT22I*: "... not sensitive to dam, dcm, or CG methylation" 
-#'   ([link](https://tools.thermofisher.com/content/sfs/manuals/15240501.pdf))
-#' - *AscI*: "AscI is strongly inhibited by NaCl and ammonium acetate"
-#'   ([link](https://www.neb.com/products/r0558-asci))
-#' - *BspEI*: Only impaired by CpG methylase
-#'   ([link](https://www.neb.com/products/r0540-bspei))
-#' - *FspI*: "Ligation is 25%–75%."
-#'   ([link](https://www.neb.com/products/r0135-fspi))
+#' 
+#' 
 #' 
 #' 
 #' # Digest genome
@@ -160,7 +148,7 @@ digest_genome <- function(enzyme_sites, dna_seq = genome_seq) {
 #+ run_digest
 enz_df <- enz_df %>% 
     mutate(digest = lapply(sites, digest_genome))
-
+#' 
 #' 
 #' ### Accounting for missing data
 #' 
@@ -202,21 +190,22 @@ invisible(apply(enz_df, 1,
 #' # Choosing enzymes and visualizing fragment sizes
 #' 
 #' 
-#' From the summary above, I'll use *ApeKI* as a common restriction enzyme, 
+#' From the summary above (and because all the following enzymes have overhangs), 
+#' I'll use *ApeKI* as a common restriction enzyme, 
 #' *BstBI* as intermediate, and
-#' *NruI-HF* as rare.
+#' *BspEI* as rare.
 #' 
-#+ make_chosen_res
-chosen_res <- c('ApeKI', 'BstBI', 'NruI-HF')
+#+ make_chosen_enz
+chosen_enz <- c('ApeKI', 'BstBI', 'BspEI')
 #' 
 #' Below are histograms of the fragment sizes for the genome digested with each enzyme.
 #' 
 #+ plot_frag_sizes, echo = FALSE
 plot_df <- enz_df %>% 
-    filter(enzyme %in% chosen_res) %>% 
+    filter(enzyme %in% chosen_enz) %>% 
     split(.$enzyme) %>% 
     map_df(~ data_frame(enzyme = .x$enzyme, frag_len = nchar(.x$digest[[1]]))) %>% 
-    mutate(enzyme = factor(enzyme, levels = chosen_res))
+    mutate(enzyme = factor(enzyme, levels = chosen_enz))
 plot_df %>% 
     ggplot(aes(frag_len / 1e3)) +
     theme(strip.text = element_text(size = 14, face = 'bold.italic')) +

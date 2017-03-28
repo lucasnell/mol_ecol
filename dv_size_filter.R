@@ -218,7 +218,7 @@ frag_sizes %>%
 #' The below code reads these fasta files.
 #' 
 #+ read_dig_data
-chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
+chosen_enz <- c('ApeKI', 'BstBI', 'BspEI')
 dig_frags <- lapply(setNames(chosen_enz, chosen_enz), function(enz) {
     fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))
     sread(fasta)

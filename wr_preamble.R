@@ -2,6 +2,7 @@
 
 suppressPackageStartupMessages({
     library(SimRAD)
+    library(ShortRead)
     library(dplyr)
     library(purrr)
     library(ggplot2)
