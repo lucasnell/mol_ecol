@@ -59,7 +59,7 @@ theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 #' (as was done in the above study):
 #' 
 #+ make_seq_p
-.seq_p <- round(654998 / 2.1e6, 4)
+seq_p <- round(654998 / 2.1e6, 4)
 #' 
 #' 
 #' 
@@ -164,7 +164,7 @@ summary(seq_fit)
 #' fragment size.
 #' 
 #+ make_prob_dens
-.prob_dens <- function(frag_sizes) {
+prob_dens <- function(frag_sizes) {
     dnbinom(frag_sizes, size = 2.013, mu = 144.8)
 }
 #' 
@@ -179,14 +179,14 @@ frag_sizes %>%
     ggplot(aes(y = prop)) + 
     geom_bar(aes(size - 25), stat = 'identity', position = 'dodge', 
              fill = 'dodgerblue') +
-    geom_line(data = data_frame(size = 1:1000, prop = .prob_dens(size)) %>% 
+    geom_line(data = data_frame(size = 1:1000, prop = prob_dens(size)) %>% 
                   mutate(prop = max(frag_sizes$prop) * prop / max(prop)),
               aes(size), size = 0.75) +
     scale_x_continuous('Fragment size (bp)', breaks = seq(0, 1000, 50),
                        labels = c(seq(0, 950, 50), 'Inf')) +
     scale_y_continuous(
         'Proportion of total fragments', 
-        sec.axis = sec_axis(~ . * max(.prob_dens(1:1000)) / max(frag_sizes$prop), 
+        sec.axis = sec_axis(~ . * max(prob_dens(1:1000)) / max(frag_sizes$prop), 
                             name = 'Density')) +
     labs(caption = expression(italic(Note) * ': x-axis represents bin bounds for bars'))
 #' 
@@ -200,14 +200,26 @@ frag_sizes %>%
 #' # Reading in digestion fragments
 #' 
 #' 
-#' I now read the fasta files made in `digest_genome.R` that represent in silico 
-#' digestions of the aphid genome using three different restriction enzymes.
+#' I next need to read fasta files made using the code below that performs in silico
+#' digestions of the aphid genome using three different restriction enzymes 
+#' (the same ones chosen in [dv_digest.md](./dv_digest.md)). 
+#' Note that this code should take a while to finish (~10 minutes).
+#' 
+#' ```{r, eval = FALSE}
+#' source('wr_digest.R')
+#' dna_ss <- read_fasta('./genome_data/aphid_genome.fa.gz')
+#' dna_list <- lapply(c('ApeKI', 'BstBI', 'NruI-HF'), digest_genome, dna_ss = dna_ss)
+#' write_fastas(dna_list, sprintf('./genome_data/frags_%s.fa.gz',
+#'                                c('ApeKI', 'BstBI', 'NruI-HF')))
+#' ```
 #' 
 #' (See the `README.md` file for why I'm including `./genome_data/` in file paths.)
 #' 
+#' The below code reads these fasta files.
+#' 
 #+ read_dig_data
-.chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
-dig_frags <- lapply(setNames(.chosen_enz, .chosen_enz), function(enz) {
+chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
+dig_frags <- lapply(setNames(chosen_enz, chosen_enz), function(enz) {
     fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))
     sread(fasta)
 })
@@ -217,10 +229,10 @@ dig_frags <- lapply(setNames(.chosen_enz, .chosen_enz), function(enz) {
 #' their probability densities from the sequenced-fragment probability density function.
 #' 
 #+ make_dig_frag_df
-dig_frag_df <- lapply(.chosen_enz, 
+dig_frag_df <- lapply(chosen_enz, 
                       function(re){
                           .frag_len <- width(dig_frags[[re]])
-                          .prob <- .prob_dens(.frag_len)
+                          .prob <- prob_dens(.frag_len)
                           .frag_index <- 1:length(.frag_len)
                           .df <- data_frame(enzyme = re, 
                                             frag_index = .frag_index,
@@ -242,7 +254,7 @@ dig_frag_df <- lapply(.chosen_enz,
 #' ```{r sample_code, eval = FALSE}
 #' dig_frag_df %>% 
 #'     filter(enzyme == 'ApeKI') %>% 
-#'     sample_frac(.seq_p, weight = prob)
+#'     sample_frac(seq_p, weight = prob)
 #' ```
 #' 
 #' ... which would give fragments with a higher probability density a greater chance
@@ -295,7 +307,7 @@ test_seq_ <- seq(594.5, 595, 0.1)
 test_prob_ <- filter(dig_frag_df, enzyme == 'ApeKI')$prob
 test_m_ <- sapply(test_seq_,
                   function(m) abs(mean(ifelse(test_prob_ * m > 1, 1, test_prob_ * m)) - 
-                                      .seq_p))
+                                      seq_p))
 par(mar = c(5, 4.5, 1, 1))
 ggplot(data = NULL, aes(test_seq_, test_m_)) +
     geom_line(size = 1, color = 'dodgerblue') +
@@ -303,11 +315,11 @@ ggplot(data = NULL, aes(test_seq_, test_m_)) +
                    test_m_[test_m_ == min(test_m_)]), shape = 1, size = 3) + 
     ylab(expression('|' ~ E(P) - P[m] ~ '|')) + 
     xlab('Multiplier')
-.prob_coef <- test_seq_[test_m_ == min(test_m_)]
+prob_coef <- test_seq_[test_m_ == min(test_m_)]
 rm(list = ls()[grepl('^test_.*_$', ls())])
 #' 
 #' 
-#' The best coefficient (`r .prob_coef`) was assigned to object `.prob_coef`.
+#' The best coefficient (`r prob_coef`) was assigned to object `prob_coef`.
 #' 
 #' 
 #' 
@@ -322,28 +334,28 @@ rm(list = ls()[grepl('^test_.*_$', ls())])
 #' In this section I test how the calibrated probability densities impact the 
 #' proportion of fragments sequenced for all enzymes, using simulated Bernoulli trials.
 #' 
-#' The `.fast_bern` function below quickly performs many Bernoulli trials, each with a
+#' The `fast_bern` function below quickly performs many Bernoulli trials, each with a
 #' unique probability (link to where I found it
 #' [here](http://r-bloggers.com/variable-probability-bernoulli-outcomes-fast-and-slow/)).
 #' It is ~75 faster than using `sapply` on a `rbinom(1,1,p)` call, and it returns a 
 #' logical instead of a binary integer vector, which makes filtering simpler.
 #' 
 #+ make_fast_bern
-.fast_bern <- function(p) {
+fast_bern <- function(p) {
     U <- runif(length(p),0,1)
     outcomes <- U < p
     return(outcomes)
 }
 #' 
 #' The `test_filter` function filters the `dig_frag_df` data frame by values in the
-#' `prob` column multiplied by `.prob_coef`, then it gets the number of rows present in 
+#' `prob` column multiplied by `prob_coef`, then it gets the number of rows present in 
 #' the filtered data frame.
 #' It returns the proportion of fragments retained for sequencing.
 #' 
 #+ make_test_filter
 test_filter <- function(enz) {
     filt_df <- filter(dig_frag_df, enzyme == enz)
-    N <- nrow(filter(filt_df, .fast_bern(prob * .prob_coef)))
+    N <- nrow(filter(filt_df, fast_bern(prob * prob_coef)))
     return(N / nrow(filt_df))
 }
 #' 
@@ -353,7 +365,7 @@ test_filter <- function(enz) {
 #' 
 #+ test_the_filter
 set.seed(329)
-sapply(.chosen_enz, function(e) sapply(1:100, function(i) test_filter(e))) %>% 
+sapply(chosen_enz, function(e) sapply(1:100, function(i) test_filter(e))) %>% 
     as_data_frame %>% 
     gather(enzyme, prop) %>% 
     group_by(enzyme) %>% 
@@ -376,16 +388,16 @@ sapply(.chosen_enz, function(e) sapply(1:100, function(i) test_filter(e))) %>%
 #' I am saving it and other required objects in an `.RData` file to be loaded
 #' prior to simulations.
 #' 
-#' This function, `.size_filter`, takes a single `DNAStringSet` as input, calculates
+#' This function, `size_filter`, takes a single `DNAStringSet` as input, calculates
 #' the adjusted probability density (i.e., $p_i^{\prime}$) according to the methods above,
 #' conducts Bernoulli trials for all fragments,
 #' then returns the filtered `DNAStringSet` object based on the trials.
 #' 
 #+ make_size_filter
-.size_filter <- function(dna_ss) {
+size_filter <- function(dna_ss) {
     frag_sizes <- width(dna_ss)
-    frag_probs <- .prob_dens(frag_sizes) * .prob_coef
-    frag_keep <- .fast_bern(frag_probs)
+    frag_probs <- prob_dens(frag_sizes) * prob_coef
+    frag_keep <- fast_bern(frag_probs)
     return(dna_ss[frag_keep])
 }
 #' 
@@ -394,12 +406,19 @@ sapply(.chosen_enz, function(e) sapply(1:100, function(i) test_filter(e))) %>%
 #' `r prettyNum(length(dig_frags[['ApeKI']]), big.mark = ',')` sequences):
 #' 
 #+ do_example_size_filter
-.size_filter(dig_frags[['ApeKI']])
+size_filter(dig_frags[['ApeKI']])
 #' 
-#' Saving necessary objects:
 #' 
-#+ save_objs, eval = FALSE
-save(.fast_bern, .prob_coef, .prob_dens, .chosen_enz, file = 'filter_objs.RData')
+#' A version `size_filter` is found in file `wr_size_filter.R`. The only difference
+#' between that one and the one above is that the one in `wr_size_filter.R` contains
+#' the following objects within it:
+#' 
+#' * `prob_coef`
+#' * `prob_dens`
+#' * `fast_bern`
+#' 
+#' `wr_size_filter.R` can be `source`d to do size filtering.
+#' 
 #' 
 #' 
 #' # Session info and package versions

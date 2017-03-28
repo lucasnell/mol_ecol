@@ -13,25 +13,23 @@ Lucas Nell
 -   [Creating function to simulate size filtering](#creating-function-to-simulate-size-filtering)
 -   [Session info and package versions](#session-info-and-package-versions)
 
-*Updated 24 March 2017*
+*Updated 28 March 2017*
 
-This script accounts for the fact that in GBS, many potential cut sites are not sequenced, and that the disparity appears to be at least partially driven by fragment size. It tests and provides objects necessary to filter the digested fragments from the previous script (`digest_genome.R`).
-
-**Note:** This script is not intended to be `source`d. The objects from this script that are necessary for downstream analyses are saved in the `filter_objs.RData` file.
+This script accounts for the fact that in GBS, many potential cut sites are not sequenced, and that the disparity appears to be at least partially driven by fragment size. I provide here the rationale for the objects in [`wr_size_filter.R`](./wr_size_filter.R) that filter digested fragments based on fragment size.
 
 **Loading packages:**
 
 ``` r
 suppressPackageStartupMessages({
-        library(fitdistrplus)
-        library(tidyr)
-        library(purrr)
-        library(readr)
-        library(ggplot2)
-        library(dplyr)
-        library(magrittr)
-        library(ShortRead)
-    })
+    library(fitdistrplus)
+    library(tidyr)
+    library(purrr)
+    library(readr)
+    library(ggplot2)
+    library(dplyr)
+    library(magrittr)
+    library(ShortRead)
+})
 ```
 
 Characterizing sequenced fragments
@@ -47,7 +45,7 @@ Proportion sequenced
 From above, I've created below an object storing the proportion of cut sites that I'll assume get sequenced when using *ApeKI* in maize (as was done in the above study):
 
 ``` r
-.seq_p <- round(654998 / 2.1e6, 4)
+seq_p <- round(654998 / 2.1e6, 4)
 ```
 
 Data on distribution of fragments
@@ -58,7 +56,7 @@ I used WebPlotDigitizer (arohatgi.info/WebPlotDigitizer/) to extract data from F
 The below code cleans up the csv file. The `rounded_p` function rounds proportion data to 4 digits while having the summed proportions still add up to 1.
 
 ``` r
-frag_sizes <- read_csv('frag_sizes.csv', col_types = 'cd') %>% 
+frag_sizes <- read_csv('./bg_data/frag_sizes.csv', col_types = 'cd') %>% 
     mutate(size = as.integer(rep(seq(50, 1000, 50), each = 2)),
            type = rep(c('predicted', 'sequenced'), 1000 / 50)) %>% 
     select(size, type, prop) %>% 
@@ -69,7 +67,7 @@ frag_sizes <- read_csv('frag_sizes.csv', col_types = 'cd') %>%
 
 This figure showed the difference between the fragment-size distribution (1) predicted from cut site locations in the maize genome and (2) from locations where reads were actually found when sequencing was performed. The figure is reproduced below.
 
-![](size_filter_files/figure-markdown_github/frag_sizes_plot-1.png)
+![](dv_size_filter_files/figure-markdown_github/frag_sizes_plot-1.png)
 
 Fitting a distribution for sequenced fragments
 ----------------------------------------------
@@ -117,25 +115,35 @@ summary(seq_fit)
 I can now create a function to calculate the probability density for a given fragment size.
 
 ``` r
-.prob_dens <- function(frag_sizes) {
+prob_dens <- function(frag_sizes) {
     dnbinom(frag_sizes, size = 2.013, mu = 144.8)
 }
 ```
 
 Here is the probability density function (black curve, right y-axis) along with the binned distribution of fragment sizes for sequenced reads (blue bars, left y-axis):
 
-![](size_filter_files/figure-markdown_github/frag_size_plot-1.png)
+![](dv_size_filter_files/figure-markdown_github/frag_size_plot-1.png)
 
 Reading in digestion fragments
 ==============================
 
-I now read the fasta files made in `digest_genome.R` that represent in silico digestions of the aphid genome using three different restriction enzymes.
+I next need to read fasta files made using the code below that performs in silico digestions of the aphid genome using three different restriction enzymes (the same ones chosen in [dv\_digest.md](./dv_digest.md)). Note that this code should take a while to finish (~10 minutes).
+
+``` r
+source('wr_digest.R')
+dna_ss <- read_fasta('./genome_data/aphid_genome.fa.gz')
+dna_list <- lapply(c('ApeKI', 'BstBI', 'NruI-HF'), digest_genome, dna_ss = dna_ss)
+write_fastas(dna_list, sprintf('./genome_data/frags_%s.fa.gz',
+                               c('ApeKI', 'BstBI', 'NruI-HF')))
+```
 
 (See the `README.md` file for why I'm including `./genome_data/` in file paths.)
 
+The below code reads these fasta files.
+
 ``` r
-.chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
-dig_frags <- lapply(setNames(.chosen_enz, .chosen_enz), function(enz) {
+chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
+dig_frags <- lapply(setNames(chosen_enz, chosen_enz), function(enz) {
     fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))
     sread(fasta)
 })
@@ -144,10 +152,10 @@ dig_frags <- lapply(setNames(.chosen_enz, .chosen_enz), function(enz) {
 This is a data frame containing, for each restriction enzyme, all fragment lengths and their probability densities from the sequenced-fragment probability density function.
 
 ``` r
-dig_frag_df <- lapply(.chosen_enz, 
+dig_frag_df <- lapply(chosen_enz, 
                       function(re){
                           .frag_len <- width(dig_frags[[re]])
-                          .prob <- .prob_dens(.frag_len)
+                          .prob <- prob_dens(.frag_len)
                           .frag_index <- 1:length(.frag_len)
                           .df <- data_frame(enzyme = re, 
                                             frag_index = .frag_index,
@@ -166,7 +174,7 @@ From here, I could filter *ApeKI*-digested fragments using the following code:
 ``` r
 dig_frag_df %>% 
     filter(enzyme == 'ApeKI') %>% 
-    sample_frac(.seq_p, weight = prob)
+    sample_frac(seq_p, weight = prob)
 ```
 
 ... which would give fragments with a higher probability density a greater chance of being selected and would give me the proportion I expect based on the maize-genome data.
@@ -187,31 +195,31 @@ where $n$ is the total number of fragments.
  -->
 I tested multiple coefficients to find the one that minimized the absolute difference between the proportion of individuals we would predict would be selected from our *ApeKI*-digested, aphid-genome fragments (i.e., 𝔼(*P*)) and the proportion sequenced from the maize data in Elshire et al. (2011; *P*<sub>*m*</sub>).
 
-![](size_filter_files/figure-markdown_github/get_multiplier-1.png)
+![](dv_size_filter_files/figure-markdown_github/get_multiplier-1.png)
 
-The best coefficient (594.6) was assigned to object `.prob_coef`.
+The best coefficient (594.6) was assigned to object `prob_coef`.
 
 Testing fragment filtering by size
 ==================================
 
 In this section I test how the calibrated probability densities impact the proportion of fragments sequenced for all enzymes, using simulated Bernoulli trials.
 
-The `.fast_bern` function below quickly performs many Bernoulli trials, each with a unique probability (link to where I found it [here](http://r-bloggers.com/variable-probability-bernoulli-outcomes-fast-and-slow/)). It is ~75 faster than using `sapply` on a `rbinom(1,1,p)` call, and it returns a logical instead of a binary integer vector, which makes filtering simpler.
+The `fast_bern` function below quickly performs many Bernoulli trials, each with a unique probability (link to where I found it [here](http://r-bloggers.com/variable-probability-bernoulli-outcomes-fast-and-slow/)). It is ~75 faster than using `sapply` on a `rbinom(1,1,p)` call, and it returns a logical instead of a binary integer vector, which makes filtering simpler.
 
 ``` r
-.fast_bern <- function(p) {
+fast_bern <- function(p) {
     U <- runif(length(p),0,1)
     outcomes <- U < p
     return(outcomes)
 }
 ```
 
-The `test_filter` function filters the `dig_frag_df` data frame by values in the `prob` column multiplied by `.prob_coef`, then it gets the number of rows present in the filtered data frame. It returns the proportion of fragments retained for sequencing.
+The `test_filter` function filters the `dig_frag_df` data frame by values in the `prob` column multiplied by `prob_coef`, then it gets the number of rows present in the filtered data frame. It returns the proportion of fragments retained for sequencing.
 
 ``` r
 test_filter <- function(enz) {
     filt_df <- filter(dig_frag_df, enzyme == enz)
-    N <- nrow(filter(filt_df, .fast_bern(prob * .prob_coef)))
+    N <- nrow(filter(filt_df, fast_bern(prob * prob_coef)))
     return(N / nrow(filt_df))
 }
 ```
@@ -220,7 +228,7 @@ Now I run the tests, and find that, as I intended, the proportion of sequenced r
 
 ``` r
 set.seed(329)
-sapply(.chosen_enz, function(e) sapply(1:100, function(i) test_filter(e))) %>% 
+sapply(chosen_enz, function(e) sapply(1:100, function(i) test_filter(e))) %>% 
     as_data_frame %>% 
     gather(enzyme, prop) %>% 
     group_by(enzyme) %>% 
@@ -238,13 +246,13 @@ Creating function to simulate size filtering
 
 Now I am going to create a function to filter by fragment size. Because this function includes some stochasticity, it is intended to be used at a later point as part of the entire simulation procedure. I am saving it and other required objects in an `.RData` file to be loaded prior to simulations.
 
-This function, `.size_filter`, takes a single `DNAStringSet` as input, calculates the adjusted probability density (i.e., *p*<sub>*i*</sub><sup>′</sup>) according to the methods above, conducts Bernoulli trials for all fragments, then returns the filtered `DNAStringSet` object based on the trials.
+This function, `size_filter`, takes a single `DNAStringSet` as input, calculates the adjusted probability density (i.e., *p*<sub>*i*</sub><sup>′</sup>) according to the methods above, conducts Bernoulli trials for all fragments, then returns the filtered `DNAStringSet` object based on the trials.
 
 ``` r
-.size_filter <- function(dna_ss) {
+size_filter <- function(dna_ss) {
     frag_sizes <- width(dna_ss)
-    frag_probs <- .prob_dens(frag_sizes) * .prob_coef
-    frag_keep <- .fast_bern(frag_probs)
+    frag_probs <- prob_dens(frag_sizes) * prob_coef
+    frag_keep <- fast_bern(frag_probs)
     return(dna_ss[frag_keep])
 }
 ```
@@ -252,7 +260,7 @@ This function, `.size_filter`, takes a single `DNAStringSet` as input, calculate
 Example usage (with no filtering, this `DNAStringSet` has 318,022 sequences):
 
 ``` r
-.size_filter(dig_frags[['ApeKI']])
+size_filter(dig_frags[['ApeKI']])
 ```
 
     ##   A DNAStringSet instance of length 99313
@@ -269,11 +277,13 @@ Example usage (with no filtering, this `DNAStringSet` has 318,022 sequences):
     ## [99312]    51 CAGCGGCTGATCTCCAAACTCGTCCTCGCTTATACCGATCCTTTTCTGCGG
     ## [99313]    15 CTGCCGCAAGTATCG
 
-Saving necessary objects:
+A version `size_filter` is found in file `wr_size_filter.R`. The only difference between that one and the one above is that the one in `wr_size_filter.R` contains the following objects within it:
 
-``` r
-save(.fast_bern, .prob_coef, .prob_dens, .chosen_enz, file = 'filter_objs.RData')
-```
+-   `prob_coef`
+-   `prob_dens`
+-   `fast_bern`
+
+`wr_size_filter.R` can be `source`d to do size filtering.
 
 Session info and package versions
 =================================
@@ -287,7 +297,7 @@ Session info and package versions
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-03-24
+    ##  date     2017-03-28
 
     ## Packages ------------------------------------------------------------------
 

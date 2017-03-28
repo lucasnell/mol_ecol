@@ -1,6 +1,13 @@
 
 # These are objects necessary for digesting a genome using restriction enzymes.
 
+# If wr_preamble.R file hasn't been sourced, it needs to be.
+# wr_preamble.R creates the .preamble_sourced object when it's run
+if(!'.preamble_sourced' %in% ls(all.names = TRUE)) source('wr_preamble.R')
+
+# This object stores the restriction enzymes I chose to test:
+chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
+
 
 # This function digests a genome (as a DNAStringSet object) using one of the 
 # restriction enzymed used previously
@@ -30,7 +37,9 @@ digest_genome <- function(enzyme_name, dna_ss) {
     
     dig <- do.call(insilico.digest, call_list)
     
-    return(dig)
+    dig_ss <- DNAStringSet(dig)
+    
+    return(dig_ss)
 }
 
 
@@ -48,7 +57,7 @@ read_fasta <- function(file_name) {
 write_fastas <- function(dna_ss, file_names = NULL) {
     if (class(dna_ss) == 'DNAStringSet') {
         dna_ss <- list(dna_ss)
-    } else if (class(dna_ss) != 'list') {
+    } else if (class(dna_ss) != 'list' | any(lapply(dna_ss, class) != 'DNAStringSet')) {
         stop('dna_ss must be a list or DNAStringSet object')
     }
     if (is.null(file_names)) {
@@ -56,12 +65,13 @@ write_fastas <- function(dna_ss, file_names = NULL) {
     } else if (length(file_names) != length(dna_ss)) {
         stop('dna_ss and file_names must be same length')
     }
-    # Using map and set_names from purrr to set sequence names before writing
+    # Using purrr::map and magrittr::set_names to set sequence names before writing
     # (Otherwise, each sequence-name line is just ">")
-    write_list <- map(dna_ss, ~ purrr::set_names(.x, paste0('seq_', 1:length(.x))))
+    write_list <- map(dna_ss, ~ magrittr::set_names(.x, paste0('seq_', 1:length(.x))))
     for (i in 1:length(write_list)) {
         writeFasta(write_list[[i]], file = file_names[i], mode = 'w', 
                    compress = grepl('.gz', file_names[i]))
         cat(file_names[i], 'written... \n')
     }
+    return(invisible(NULL))
 }
