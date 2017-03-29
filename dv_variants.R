@@ -204,6 +204,29 @@ rand_locs <- lapply(1:40, .one_seq)
 
 
 
+# This is an older C++ version of the function in dv_make_strands.R
+library(Rcpp)
+cppFunction(
+    'std::vector<std::string> cut_seqs(std::vector<std::string> seq, int cut_len) {
+        int n = seq.size();
+        int seq_len;
+        std::vector<std::string> output(2 * n);
+        for(int i = 0, j = 0; i < n; i++, j+=2) {
+            seq_len = seq[i].length();
+            if(seq_len < cut_len){
+                output[j] = seq[i];
+            } else {
+                output[j] = seq[i].substr(0, cut_len);
+                output[j+1] = seq[i].substr(seq_len - cut_len, cut_len);
+            }
+        }
+        return output;
+    }'
+)
+
+
+
+
 #' <!--- References for reading and writing fastas
 # dig_frags <- lapply(setNames(.chosen_enz, .chosen_enz), function(enz) {
 #     fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))

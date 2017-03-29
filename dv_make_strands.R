@@ -17,8 +17,7 @@
 #' 
 #' This script tests the function that removes regions from digested
 #' fragments that will not be sequenced (those that are far from restriction enzyme cut
-#' sites).
-#' 
+#' sites)
 #' 
 #' 
 #' 
@@ -71,20 +70,27 @@ rm_faraway <- function(dna_ss, enzyme, read_len = 100, bc_len = 4) {
     cut_len <- as.integer(read_len - bc_len - overhang)
     # Extracting character vector from input DNAStringSet
     character_seqs <- as.character(dna_ss)
-    # Inner function that cuts one sequence
+    # Inner function that cuts (i.e., removes) faraways from one sequence
     .one_cut <- function(.s) {
         .seq_len <- as.integer(nchar(.s))
         if (.seq_len < cut_len) {
-            return(rep(.s,2))
+            f_strand <- r_strand <- .s
         } else {
-            return(c(.Internal(substr(.s, 1L, cut_len)), 
-                     .Internal(substr(.s, .seq_len - cut_len + 1L, .seq_len))))
+            f_strand <- .Internal(substr(.s, 1L, cut_len))
+            r_strand <- .Internal(substr(.s, .seq_len - cut_len + 1L, .seq_len))
         }
+        return(matrix(c(f_strand, r_strand), nrow = 1))
     }
     # applying that inner function to each string in the character vector
-    cut_seq_char <- unlist(lapply(character_seqs, .one_cut))
-    # Now converting back to DNAStringSet
-    cut_dna_ss <- DNAStringSet(cut_seq_char)
+    mat_list <- lapply(character_seqs, .one_cut)
+    cut_seq_char <- do.call(rbind, mat_list)
+    # Creating DNAStringSet objects for forward and reverse strands.
+    # Because I am doing unidirectional (forward-only) sequencing, I need to make the 
+    # reverse strands reverse complements of the forward one.
+    f_strands <- DNAStringSet(cut_seq_char[,1])
+    r_strands <- reverseComplement(DNAStringSet(cut_seq_char[,2]))
+    # Now I combine them
+    cut_dna_ss <- append(f_strands, r_strands)
     return(cut_dna_ss)
 }
 #' 
