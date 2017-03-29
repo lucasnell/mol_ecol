@@ -1,5 +1,5 @@
 #' ---
-#' title: 'Remove areas faraway from cut sites'
+#' title: 'Make strands for sequence simulation'
 #' author: 'Lucas Nell'
 #' date: '28 March 2017'
 #' output: 
@@ -15,9 +15,17 @@
 #' 
 #' 
 #' 
-#' This script tests the function that removes regions from digested
-#' fragments that will not be sequenced (those that are far from restriction enzyme cut
-#' sites)
+#' This script tests the function that creates strands to be used for sequencing 
+#' simulation.
+#' It is to be used on digested fragments.
+#' It removes regions from fragments that will not be sequenced (those that are far from
+#' restriction enzyme cut sites).
+#' For each cut-site-adjacent area, it returns a forward and reverse strand, the latter 
+#' of which is returned as its reverse complement.
+#' The reverse complement is returned because I will be simulating sequencing from
+#' fragments unidirectionally in the forward direction.
+#' I chose to do unidirectional sequencing because this more similarly simulates how
+#' both forward and reverse fragment ends can be assigned sequencing primers.
 #' 
 #' 
 #' 
@@ -52,22 +60,20 @@ suppressPackageStartupMessages(library(ShortRead))
 #' 
 #' # Function
 #' 
-#' The `rm_faraway` removes portions of fragments that are far from restriction enzyme
+#' The `make_strands` removes portions of fragments that are far from restriction enzyme
 #' cut sites.
-#' DNA sequences (as a `DNAStringSet` object) and an enzyme name are the required 
-#' arguments.
+#' A `DNAStringSet` object of sequence fragments is the required argument.
 #' Read length (defaults to 100bp) and barcode length (defaults to 4) are optional
 #' arguments.
-#' It returns a `DNAStringSet` object with the faraway fragments removed.
+#' It returns a `DNAStringSet` object with the new sequences as described above.
 #' The returned set should have twice as many sequences as the input set of sequences
-#' because `rm_faraway` outputs a sequence for each sequencing strand.
+#' because `make_strands` outputs a sequence for each sequencing strand.
 #' 
 #+ make_function
-rm_faraway <- function(dna_ss, enzyme, read_len = 100, bc_len = 4) {
-    overhang <- c(3, 2, 4)[c('ApeKI', 'BstBI', 'BspEI') == enzyme]
+make_strands <- function(dna_ss, read_len = 100, bc_len = 4) {
     # Length to cut fragment to is simply the read length minus the barcode length and
     # the restriction enzyme's overhang length
-    cut_len <- as.integer(read_len - bc_len - overhang)
+    cut_len <- as.integer(read_len - bc_len)
     # Extracting character vector from input DNAStringSet
     character_seqs <- as.character(dna_ss)
     # Inner function that cuts (i.e., removes) faraways from one sequence
@@ -115,11 +121,11 @@ test_fasta <- sread(readFasta('./genome_data/frags_BstBI.fa.gz'))
 filt_fasta <- size_filter(test_fasta)
 #' 
 #' 
-#' Below is a run of `rm_faraway` including the run time and output.
+#' Below is a run of `make_strands` including the run time and output.
 #' 
 #+ run_function
-system.time({rm_test <- rm_faraway(filt_fasta, 'BstBI')})
-rm_test
+system.time({ms_test <- make_strands(filt_fasta)})
+ms_test
 #' 
 #' 
 #' 
