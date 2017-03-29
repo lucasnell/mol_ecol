@@ -14,8 +14,7 @@
 #' 
 #' 
 #' This script accounts for the fact that in GBS, many potential cut sites are not 
-#' sequenced, and that the disparity appears to be at least partially driven by fragment
-#' size.
+#' sequenced, and that the disparity appears to be mostly driven by fragment size.
 #' I provide here the rationale for the objects in 
 #' [`wr_size_filter.R`](./wr_size_filter.R) that filter digested fragments based on 
 #' fragment size.
@@ -208,9 +207,9 @@ frag_sizes %>%
 #' ```{r, eval = FALSE}
 #' source('wr_digest.R')
 #' dna_ss <- read_fasta('./genome_data/aphid_genome.fa.gz')
-#' dna_list <- lapply(c('ApeKI', 'BstBI', 'NruI-HF'), digest_genome, dna_ss = dna_ss)
+#' dna_list <- lapply(c('ApeKI', 'BstBI', 'BspEI'), digest_genome, dna_ss = dna_ss)
 #' write_fastas(dna_list, sprintf('./genome_data/frags_%s.fa.gz',
-#'                                c('ApeKI', 'BstBI', 'NruI-HF')))
+#'                                c('ApeKI', 'BstBI', 'BspEI')))
 #' ```
 #' 
 #' (See the `README.md` file for why I'm including `./genome_data/` in file paths.)

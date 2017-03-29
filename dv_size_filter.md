@@ -13,9 +13,9 @@ Lucas Nell
 -   [Creating function to simulate size filtering](#creating-function-to-simulate-size-filtering)
 -   [Session info and package versions](#session-info-and-package-versions)
 
-*Updated 28 March 2017*
+*Updated 29 March 2017*
 
-This script accounts for the fact that in GBS, many potential cut sites are not sequenced, and that the disparity appears to be at least partially driven by fragment size. I provide here the rationale for the objects in [`wr_size_filter.R`](./wr_size_filter.R) that filter digested fragments based on fragment size.
+This script accounts for the fact that in GBS, many potential cut sites are not sequenced, and that the disparity appears to be mostly driven by fragment size. I provide here the rationale for the objects in [`wr_size_filter.R`](./wr_size_filter.R) that filter digested fragments based on fragment size.
 
 **Loading packages:**
 
@@ -132,9 +132,9 @@ I next need to read fasta files made using the code below that performs in silic
 ``` r
 source('wr_digest.R')
 dna_ss <- read_fasta('./genome_data/aphid_genome.fa.gz')
-dna_list <- lapply(c('ApeKI', 'BstBI', 'NruI-HF'), digest_genome, dna_ss = dna_ss)
+dna_list <- lapply(c('ApeKI', 'BstBI', 'BspEI'), digest_genome, dna_ss = dna_ss)
 write_fastas(dna_list, sprintf('./genome_data/frags_%s.fa.gz',
-                               c('ApeKI', 'BstBI', 'NruI-HF')))
+                               c('ApeKI', 'BstBI', 'BspEI')))
 ```
 
 (See the `README.md` file for why I'm including `./genome_data/` in file paths.)
@@ -142,7 +142,7 @@ write_fastas(dna_list, sprintf('./genome_data/frags_%s.fa.gz',
 The below code reads these fasta files.
 
 ``` r
-chosen_enz <- c('ApeKI', 'BstBI', 'NruI-HF')
+chosen_enz <- c('ApeKI', 'BstBI', 'BspEI')
 dig_frags <- lapply(setNames(chosen_enz, chosen_enz), function(enz) {
     fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))
     sread(fasta)
@@ -236,10 +236,10 @@ sapply(chosen_enz, function(e) sapply(1:100, function(i) test_filter(e))) %>%
     as.data.frame
 ```
 
-    ##    enzyme       mean           sd
-    ## 1   ApeKI 0.31189537 0.0003238056
-    ## 2   BstBI 0.12898486 0.0003128048
-    ## 3 NruI-HF 0.08376481 0.0004313927
+    ##   enzyme       mean           sd
+    ## 1  ApeKI 0.31189537 0.0003238056
+    ## 2  BspEI 0.08408263 0.0003866768
+    ## 3  BstBI 0.12898486 0.0003128048
 
 Creating function to simulate size filtering
 ============================================
@@ -263,7 +263,7 @@ Example usage (with no filtering, this `DNAStringSet` has 318,022 sequences):
 size_filter(dig_frags[['ApeKI']])
 ```
 
-    ##   A DNAStringSet instance of length 99313
+    ##   A DNAStringSet instance of length 99143
     ##         width seq
     ##     [1]   135 TTTACAATTGCTATTGTAACAATATATCA...AAAAATTGAAAAATGACAATGTCCGTAAG
     ##     [2]    39 CAGCTGAGGAAAGAGATGGATGGAGAGGAATTTGTTTGG
@@ -271,11 +271,11 @@ size_filter(dig_frags[['ApeKI']])
     ##     [4]   139 CAGCTCAGTCCCAAATATAATATATTACT...CTACTTTTGTCGCAATGCTCCTAAAATCG
     ##     [5]   142 CAGCCCCCTCAGCCCCTCGCCTGGCTACG...CGGAACTTAAGGTTAGGTCCCGCACACAG
     ##     ...   ... ...
-    ## [99309]   180 CTGCGCCCTCGGGTTCACGTTTTATAGTA...GGTCGACGGGTATTGTGTTTGTCGTGTTG
-    ## [99310]   166 CTGCCGATGTGAATAACGTCAACGGTCCC...ACTTTGCCTAACCCAACCTAATCTAGTGG
-    ## [99311]    87 CTGCCCACGTCTGTGAAACCTGCCCGAGT...CCGGGCTGTTCGGACTGGAAAGCTTTCGG
-    ## [99312]    51 CAGCGGCTGATCTCCAAACTCGTCCTCGCTTATACCGATCCTTTTCTGCGG
-    ## [99313]    15 CTGCCGCAAGTATCG
+    ## [99139]   180 CTGCGCCCTCGGGTTCACGTTTTATAGTA...GGTCGACGGGTATTGTGTTTGTCGTGTTG
+    ## [99140]   166 CTGCCGATGTGAATAACGTCAACGGTCCC...ACTTTGCCTAACCCAACCTAATCTAGTGG
+    ## [99141]    87 CTGCCCACGTCTGTGAAACCTGCCCGAGT...CCGGGCTGTTCGGACTGGAAAGCTTTCGG
+    ## [99142]    51 CAGCGGCTGATCTCCAAACTCGTCCTCGCTTATACCGATCCTTTTCTGCGG
+    ## [99143]    15 CTGCCGCAAGTATCG
 
 A version `size_filter` is found in file `wr_size_filter.R`. The only difference between that one and the one above is that the one in `wr_size_filter.R` contains the following objects within it:
 
@@ -297,7 +297,7 @@ Session info and package versions
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-03-28
+    ##  date     2017-03-29
 
     ## Packages ------------------------------------------------------------------
 

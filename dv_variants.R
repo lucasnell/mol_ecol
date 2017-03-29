@@ -168,7 +168,7 @@ a_n <- function(n) {
 #' # Functions to create 
 #' 
 
-fasta <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'NruI-HF')))
+fasta <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'BspEI')))
 # fasta[[1]] <- DNAString('AA')
 # DNAStringSet(c('AA', 'GG'))
 
