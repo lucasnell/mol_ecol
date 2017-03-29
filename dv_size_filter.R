@@ -336,8 +336,9 @@ rm(list = ls()[grepl('^test_.*_$', ls())])
 #' The `fast_bern` function below quickly performs many Bernoulli trials, each with a
 #' unique probability (link to where I found it
 #' [here](http://r-bloggers.com/variable-probability-bernoulli-outcomes-fast-and-slow/)).
-#' It is ~75 faster than using `sapply` on a `rbinom(1,1,p)` call, and it returns a 
-#' logical instead of a binary integer vector, which makes filtering simpler.
+#' The advantage of using this over `rbinom(1,1,p)`, where `p` is a vector of 
+#' probabilities, is that `fast_bern` returns a logical instead of a binary integer 
+#' vector, which makes filtering simpler and faster.
 #' 
 #+ make_fast_bern
 fast_bern <- function(p) {

@@ -18,3 +18,5 @@ size_filter <- function(dna_ss) {
     frag_keep <- .fast_bern(frag_probs)
     return(dna_ss[frag_keep])
 }
+
+
