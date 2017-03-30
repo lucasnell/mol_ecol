@@ -168,6 +168,45 @@ a_n <- function(n) {
 #' 
 #' # Functions to create 
 #' 
+#' 
+#' These functions (1) do pairwise comparisons for a vector of sequences (each sequence
+#' containing one nucleotide for each sample) and (2) create a sequence from a 
+#' specified number of each nucleotide.
+#' 
+pw_comp <- function(seq_vector) {
+    seq_vec <- .Internal(strsplit(seq_vector, '', FALSE, FALSE, FALSE))
+    output <- sapply(seq_vec, 
+                     function(.s) {
+                         pw_mat <- t(combn(.s, 2))
+                         diffs <- ifelse(pw_mat[,1] == pw_mat[,2], 0, 1)
+                         return(mean(diffs))
+                     })
+    return(output)
+}
+make_seq <- function(a, c, g, t) {
+    paste(c(rep('A', as.integer(a)), rep('C', as.integer(c)), rep('G', as.integer(g)), 
+            rep('T', as.integer(t))), collapse = '')
+}
+#' 
+#' 
+#' This function creates a frequency matrix that coincides closest with specified 
+#' divergence at segregated sites and sums to the number of samples.
+#' 
+#' This takes ~1 min for `N=100`, ~2 sec for `N=50`, and << 1 sec for `N=10`.
+#' 
+get_freq_mat <- function(N, divergence) {
+    freq_mat <- combinations(N + 1, 4, 0:N, set = FALSE, repeats.allowed = TRUE)
+    freq_sums <- rowSums(freq_mat)
+    freq_mat <- freq_mat[freq_sums == N,]
+    pw_divs <- pw_comp(apply(freq_mat, 1, function(x) do.call(make_seq, as.list(x))))
+    min_diff_inds <- which(abs(pw_divs - divergence) == min(abs(pw_divs - divergence)))
+    cat(sprintf('Minimum absolute difference from divergence = %s\n', 
+                format(min(abs(pw_divs - divergence)), scientific = TRUE, digits = 4)))
+    return(freq_mat[min_diff_inds,])
+}
+
+
+
 
 
 
@@ -192,56 +231,18 @@ char_fasta <- as.character(test_fasta)
 library(Rcpp)
 library(RcppArmadillo)
 
-# .change_sites <- function(seq, positions, divergence = seg_div, N = 10) {
+# .change_sites <- function(seq, positions, freq_mat, N = 10) {
 N = 10
-divergence = seg_div
 seq = 'AAAAAA'
 positions = c(1, 3, 5)
-
-samp_p <- 10 * {divergence - (floor(divergence * 10) / 10)}
-samp_lims <- c(floor(divergence * N), ceiling(divergence * N))
-N_to_ch <- sample(samp_lims, 1, prob = c(1 - samp_p, samp_p))
-
-# c('A','C','G','T')
-combn(c('A','C','G','T'), 2)[sample(1:6, N_to_ch, F),]
-permutations(4, 2, set = F, repeats.allowed = FALSE)
-perms <- permutations(4, 10, set = FALSE, repeats.allowed = TRUE)
-perms %>% apply(1, function(.x) length(unique(.x)) >= 7) %>% sum
-
-pw_comp <- function(seq) {
-    seq_vec <- unlist(strsplit(seq, ''))
-    pw_mat <- t(combn(seq_vec, 2))
-    diffs <- apply(pw_mat, 1, function(r) length(unique(r)) - 1)
-    return(mean(diffs))
-}
-make_seq <- function(a, c, g, t) {
-    paste(c(rep('A', as.integer(a)), rep('C', as.integer(c)), rep('G', as.integer(g)), 
-            rep('T', as.integer(t))), collapse = '')
-}
-
-z <- c()
-for (x in 0:5) z <- c(z, pw_comp(make_seq(5, 5 - x, x, 5)))
-
-plot(0:5, z, type = 'l')
-
-
-divergence
+freq_mat = get_freq_mat(N, seg_div)
 
 
 
-pw_comp(make_seq(2, 0, 4, 4))
-
-factorial(10) / factorial(10 - 4)
-b <- combinations(N + 1, 4, 0:N, set = FALSE, repeats.allowed = TRUE)
-bs <- rowSums(b)
-b <- b[bs == 10,]
-bp <- apply(b, 1, function(x) pw_comp(do.call(make_seq, as.list(x))))
-bi <- which(abs(bp - divergence) == min(abs(bp - divergence)))
-b[bi,]
 
 
 
-# Left off --> the above function gets the closest match for the seg_div parameter
+
 
 
 # }

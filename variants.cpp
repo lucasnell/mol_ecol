@@ -8,7 +8,6 @@ IntegerVector cpp_one_seq(int i, NumericVector seq_lens, IntegerMatrix freq_mat)
     int seq_length;
     NumericVector rand_seq_filt;
     int samp_n;
-    // IntegerVector seq_range;
     int seq_num;
     NumericVector ran_floats;
     
@@ -18,8 +17,7 @@ IntegerVector cpp_one_seq(int i, NumericVector seq_lens, IntegerMatrix freq_mat)
     IntegerVector ran_locs(samp_n);
 
     seq_length = seq_lens[seq_num - 1];
-    // seq_range = Range(1, seq_length);
-    // ran_locs = RcppArmadillo::sample(seq_range, samp_n, FALSE);
+    
     while (is_true(any(duplicated(ran_locs)))) {
         ran_floats = runif(samp_n, 0, seq_length);
         ran_locs = ceiling(ran_floats);
