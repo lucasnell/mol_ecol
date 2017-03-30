@@ -174,7 +174,9 @@ a_n <- function(n) {
 #' specified number of each nucleotide.
 #' 
 pw_comp <- function(seq_vector) {
-    seq_vec <- .Internal(strsplit(seq_vector, '', FALSE, FALSE, FALSE))
+    if (length(seq_vector[[1]]) == 1) {
+        seq_vec <- .Internal(strsplit(seq_vector, '', FALSE, FALSE, FALSE))
+    }
     output <- sapply(seq_vec, 
                      function(.s) {
                          pw_mat <- t(combn(.s, 2))
@@ -183,18 +185,22 @@ pw_comp <- function(seq_vector) {
                      })
     return(output)
 }
-make_seq <- function(a, c, g, t) {
-    paste(c(rep('A', as.integer(a)), rep('C', as.integer(c)), rep('G', as.integer(g)), 
-            rep('T', as.integer(t))), collapse = '')
+make_seq <- function(a, c, g, t, return_vec = FALSE) {
+    seq_vec <- c(rep('A', as.integer(a)), rep('C', as.integer(c)), 
+                 rep('G', as.integer(g)), rep('T', as.integer(t)))
+    if (return_vec) return(seq_vec)
+    return(paste(seq_vec, collapse = ''))
 }
 #' 
 #' 
-#' This function creates a frequency matrix that coincides closest with specified 
-#' divergence at segregated sites and sums to the number of samples.
+#' This function creates a nucleotide frequency matrix that coincides closest with
+#' specified divergence at segregated sites and sums to the number of samples.
+#' The order of the frequencies is not considered important, since I intend
+#' rows in this frequency matrix to be shuffled when used.
 #' 
 #' This takes ~1 min for `N=100`, ~2 sec for `N=50`, and << 1 sec for `N=10`.
 #' 
-get_freq_mat <- function(N, divergence) {
+nt_freq <- function(N, divergence) {
     freq_mat <- combinations(N + 1, 4, 0:N, set = FALSE, repeats.allowed = TRUE)
     freq_sums <- rowSums(freq_mat)
     freq_mat <- freq_mat[freq_sums == N,]
@@ -204,6 +210,38 @@ get_freq_mat <- function(N, divergence) {
                 format(min(abs(pw_divs - divergence)), scientific = TRUE, digits = 4)))
     return(freq_mat[min_diff_inds,])
 }
+#' 
+#' 
+#' This function changes one sequence to `N` sequences, where `N` is the number of 
+#' samples.
+#' It also introduces variants at the supplied positions.
+#' The variants will conform to the nucleotide frequency matrix that should be created
+#' beforehand (see above for its description).
+#' This took 0.012 sec to change 50 positions in a 447-length sequence.
+#' 
+#' 
+change_sites <- function(seq, positions, freq_mat) {
+    
+    N <- sum(freq_mat[1,])
+    
+    if (length(positions) == 0) return(rep(seq, N))
+    
+    seq_vec <- unlist(.Internal(strsplit(seq, '', FALSE, FALSE, FALSE)))
+    
+    seq_mat <- matrix(rep(seq_vec, N), nrow = N, byrow = TRUE)
+    
+    ran_freq <- freq_mat[sample(nrow(freq_mat), 1), sample(4)]
+    new_nucs <- sapply(positions, 
+                       function(i) do.call(make_seq, as.list(c(ran_freq, TRUE))))
+    
+    seq_mat[,positions] <- new_nucs
+    
+    seq_out <- apply(seq_mat, 1, paste0, collapse = '')
+    
+    return(seq_out)
+}
+
+
 
 
 
@@ -228,70 +266,55 @@ char_fasta <- as.character(test_fasta)
 
 # get_seg_sites <- function(seq_lens, seg_sites)
 # }
-library(Rcpp)
-library(RcppArmadillo)
-
-# .change_sites <- function(seq, positions, freq_mat, N = 10) {
-N = 10
-seq = 'AAAAAA'
-positions = c(1, 3, 5)
-freq_mat = get_freq_mat(N, seg_div)
 
 
-
-
-
-
-
-
-
-# }
-
-.one_seq <- function(.i, .seqs, .freq_mat) {
-    seq_num <- .freq_mat[.i,1]
-    samp_n <- .freq_mat[.i,2]
-    seq <- .seqs[seq_num]
-    ran_locs <- sample(nchar(seq), samp_n, replace = FALSE)
+get_locs <- function(.seq_num, .samp_n, .seq_lens) {
+    ran_locs <- .Internal(sample(.seq_lens[.seq_num], .samp_n, FALSE, NULL))
     return(ran_locs)
 }
-
-sourceCpp('variants.cpp')
-
-i = which(freq_mat[,2] == max(freq_mat[,2]))
-
-set.seed(1); .one_seq(i)
-set.seed(1); cpp_one_seq(i - 1, seq_lens, freq_mat)
 
 
 seq_lens <- nchar(char_fasta)
 total_seg <- round(sum(seq_lens) * seg_sites, 0)
 set.seed(8)
 rand_seqs <- sort(sample(length(seq_lens), total_seg, replace = TRUE, prob = seq_lens))
-freq_mat <- mutate(as_data_frame(table(rand_seqs)), seq = as.integer(rand_seqs)) %>% 
+seq_freq <- mutate(as_data_frame(table(rand_seqs)), seq = as.integer(rand_seqs)) %>% 
     select(seq, n) %>% 
     as.matrix
-head(freq_mat)
+head(seq_freq)
+nrow(seq_freq)
 
 
-system.time({rand_locs <- lapply(
-    1:nrow(freq_mat),
-    .one_seq, .seq_lens = seq_lens, .freq_mat = freq_mat)})
-#    user  system elapsed 
-#   0.621   0.056   0.691
-rand_locs <- c(rand_locs, recursive = TRUE)
+
+
+
+
+system.time({rand_locs <- c(mapply(get_locs, seq_freq[,1], seq_freq[,2],
+    MoreArgs = list(.seq_lens = seq_lens)), recursive = TRUE)})
+#    user  system elapsed
+#   0.274   0.019   0.299
 head(rand_locs)
 
-system.time({cpp_rand_locs <- lapply(
-    # 1:nrow(freq_mat),
-    1:10000, 
-    cpp_one_seq, seq_lens = seq_lens, freq_mat = freq_mat)})
-#    user  system elapsed 
-#   2.275   2.911   5.245 
-cpp_rand_locs <- c(rand_locs, recursive = TRUE)
+
+
+library(Rcpp)
+library(RcppArmadillo)
+sourceCpp('variants.cpp')
+
+system.time({cpp_rand_locs <- cpp_get_sites(seq_lens, seq_freq)})
+#    user  system elapsed
+#   0.028   0.001   0.030
 head(cpp_rand_locs)
+cpp_rand_locs
+seq_lens[sub_seq_freq[,1]]
 
 
+rm(cpp_rand_locs); invisible(gc())
 
+system.time({sub_rand_locs <- mapply(get_locs, sub_seq_freq[,1], sub_seq_freq[,2],
+       MoreArgs = list(.seq_lens = sub_seq_lens)) %>% 
+    c(recursive = TRUE)})
+head(sub_rand_locs)
 
 
 
