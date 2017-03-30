@@ -27,6 +27,7 @@ suppressPackageStartupMessages({
     library(purrr)
     library(dplyr)
     library(ShortRead)
+    library(gtools)
 })
 #' 
 #+ set_theme, echo = FALSE
@@ -115,7 +116,7 @@ a_n <- function(n) {
 #' Now to compute the proportion of segregating sites for my chosen sample size of 
 #' `r .n`, I simply multiply $\theta_w$ and $a_{10}$.
 #' 
-(seg_sites <- theta_w * a_n(10))
+(seg_sites <- round(theta_w * a_n(10), 5))
 #' 
 #' 
 #' 
@@ -160,7 +161,7 @@ a_n <- function(n) {
 #' This leaves me with the proportional nucleotide divergence between two sequences
 #' at segregating sites.
 #' 
-(seg_div <- (theta_pi * .n^2 / choose(.n, 2)) / seg_sites)
+(seg_div <- round({theta_pi * .n^2 / choose(.n, 2)} / seg_sites, 4))
 #' 
 #' 
 #' 
@@ -168,29 +169,133 @@ a_n <- function(n) {
 #' # Functions to create 
 #' 
 
-fasta <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'BspEI')))
-# fasta[[1]] <- DNAString('AA')
-# DNAStringSet(c('AA', 'GG'))
+
+
+
+#' I am `source`-ing `wr_size_filter.R` to use those objects to first filter the 
+#' fragments by size before removing faraway sequences.
+#' 
+#+ trick_preamble, echo = FALSE
+# This is to keep `wr_size_filter.R` from source-ing `wr_preamble.R`
+.preamble_sourced <- TRUE
+#' 
+#+ source_size_filter
+source('wr_size_filter.R')
+#' 
+test_fasta <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'ApeKI'))) %>% 
+    size_filter
+char_fasta <- as.character(test_fasta)
+
 
 # get_seg_sites <- function(seq_lens, seg_sites)
 # }
+library(Rcpp)
+library(RcppArmadillo)
 
-seq_num = 1
-.one_seq <- function(seq_num) {
-    system.time({seq_length <- seq_lens[seq_num]
-    samp_n <- length(rand_seqs[rand_seqs == seq_num])
-    ran_locs <- sample(1:seq_length, samp_n, replace = FALSE)})
+# .change_sites <- function(seq, positions, divergence = seg_div, N = 10) {
+N = 10
+divergence = seg_div
+seq = 'AAAAAA'
+positions = c(1, 3, 5)
+
+samp_p <- 10 * {divergence - (floor(divergence * 10) / 10)}
+samp_lims <- c(floor(divergence * N), ceiling(divergence * N))
+N_to_ch <- sample(samp_lims, 1, prob = c(1 - samp_p, samp_p))
+
+# c('A','C','G','T')
+combn(c('A','C','G','T'), 2)[sample(1:6, N_to_ch, F),]
+permutations(4, 2, set = F, repeats.allowed = FALSE)
+perms <- permutations(4, 10, set = FALSE, repeats.allowed = TRUE)
+perms %>% apply(1, function(.x) length(unique(.x)) >= 7) %>% sum
+
+pw_comp <- function(seq) {
+    seq_vec <- unlist(strsplit(seq, ''))
+    pw_mat <- t(combn(seq_vec, 2))
+    diffs <- apply(pw_mat, 1, function(r) length(unique(r)) - 1)
+    return(mean(diffs))
+}
+make_seq <- function(a, c, g, t) {
+    paste(c(rep('A', as.integer(a)), rep('C', as.integer(c)), rep('G', as.integer(g)), 
+            rep('T', as.integer(t))), collapse = '')
+}
+
+z <- c()
+for (x in 0:5) z <- c(z, pw_comp(make_seq(5, 5 - x, x, 5)))
+
+plot(0:5, z, type = 'l')
+
+
+divergence
+
+
+
+pw_comp(make_seq(2, 0, 4, 4))
+
+factorial(10) / factorial(10 - 4)
+b <- combinations(N + 1, 4, 0:N, set = FALSE, repeats.allowed = TRUE)
+bs <- rowSums(b)
+b <- b[bs == 10,]
+bp <- apply(b, 1, function(x) pw_comp(do.call(make_seq, as.list(x))))
+bi <- which(abs(bp - divergence) == min(abs(bp - divergence)))
+b[bi,]
+
+
+
+# Left off --> the above function gets the closest match for the seg_div parameter
+
+
+# }
+
+.one_seq <- function(.i, .seqs, .freq_mat) {
+    seq_num <- .freq_mat[.i,1]
+    samp_n <- .freq_mat[.i,2]
+    seq <- .seqs[seq_num]
+    ran_locs <- sample(nchar(seq), samp_n, replace = FALSE)
     return(ran_locs)
 }
 
-(0.057 * 40e3) / 60
+sourceCpp('variants.cpp')
+
+i = which(freq_mat[,2] == max(freq_mat[,2]))
+
+set.seed(1); .one_seq(i)
+set.seed(1); cpp_one_seq(i - 1, seq_lens, freq_mat)
 
 
-seq_lens <- width(fasta)
+seq_lens <- nchar(char_fasta)
 total_seg <- round(sum(seq_lens) * seg_sites, 0)
-rand_seqs <- sort(sample(1:length(seq_lens), total_seg, replace = TRUE, prob = seq_lens))
-# rand_locs <- sapply(1:length(seq_lens), .one_seq)
-rand_locs <- lapply(1:40, .one_seq)
+set.seed(8)
+rand_seqs <- sort(sample(length(seq_lens), total_seg, replace = TRUE, prob = seq_lens))
+freq_mat <- mutate(as_data_frame(table(rand_seqs)), seq = as.integer(rand_seqs)) %>% 
+    select(seq, n) %>% 
+    as.matrix
+head(freq_mat)
+
+
+system.time({rand_locs <- lapply(
+    1:nrow(freq_mat),
+    .one_seq, .seq_lens = seq_lens, .freq_mat = freq_mat)})
+#    user  system elapsed 
+#   0.621   0.056   0.691
+rand_locs <- c(rand_locs, recursive = TRUE)
+head(rand_locs)
+
+system.time({cpp_rand_locs <- lapply(
+    # 1:nrow(freq_mat),
+    1:10000, 
+    cpp_one_seq, seq_lens = seq_lens, freq_mat = freq_mat)})
+#    user  system elapsed 
+#   2.275   2.911   5.245 
+cpp_rand_locs <- c(rand_locs, recursive = TRUE)
+head(cpp_rand_locs)
+
+
+
+
+
+
+
+
 
 
 # /////////////////////////////////////

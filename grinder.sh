@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Runs grinder simulator on fasta file(s)
+
+
 tot_reads=100
 out_name=gr_out
 out_dir=~/Desktop/grinder_out
