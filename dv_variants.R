@@ -240,6 +240,7 @@ change_sites <- function(seq, positions, freq_mat) {
     
     return(seq_out)
 }
+system.time(replicate(1000, change_sites(char_fasta[1], seq.int(1, 130, 2), freq_mat)))
 system.time(replicate(1000, cpp_change_sites(char_fasta[1], seq.int(1, 130, 2), freq_mat)))
 #' 
 #' 
@@ -270,7 +271,10 @@ library(RcppArmadillo)
 sourceCpp('variants.cpp')
 
 
-
+get_sites <- function(.seq_num, .samp_n, .seq_lens) {
+    ran_locs <- .Internal(sample(.seq_lens[.seq_num], .samp_n, FALSE, NULL))
+    return(ran_locs)
+}
 
 seq_lens <- nchar(char_fasta)
 total_seg <- round(sum(seq_lens) * seg_sites, 0)
@@ -279,27 +283,40 @@ rand_seqs <- sort(sample(length(seq_lens), total_seg, replace = TRUE, prob = seq
 seq_freq <- mutate(as_data_frame(table(rand_seqs)), seq = as.integer(rand_seqs)) %>% 
     select(seq, n) %>% 
     as.matrix
-system.time({cpp_rand_locs <- cpp_get_sites(seq_lens, seq_freq)})
+head(seq_freq)
+system.time({rand_locs <- c(mapply(get_sites, seq_freq[,1], seq_freq[,2],
+                                   MoreArgs = list(.seq_lens = seq_lens)), 
+                            recursive = TRUE)})
+system.time({rand_locs <- cpp_get_sites(seq_lens, seq_freq)})
+
+pos_mat <- cbind(rand_seqs, rand_locs)
+head(pos_mat)
 
 
 
-system.time({rand_locs <- c(mapply(get_locs, seq_freq[,1], seq_freq[,2],
-    MoreArgs = list(.seq_lens = seq_lens)), recursive = TRUE)})
-#    user  system elapsed
-#   0.274   0.019   0.299
-head(rand_locs)
+sub <- round(length(char_fasta) / 10000)
+sub_fasta <- char_fasta[1:sub]
+sub_pos <- pos_mat[pos_mat[,1] <= sub,]
 
 
 
+change_all_sites <- function(seq_vec, positions_mat, freq_mat) {
+    seq_nums <- positions_mat[,1]
+    positions <- positions_mat[,2]
+    out_list <- lapply(1:length(seq_vec), 
+                       function(.i) {
+                           seq <- seq_vec[.i]
+                           positions_i <- positions[seq_nums == .i]
+                           new_seq <- change_sites(seq, positions_i, freq_mat)
+                           return(new_seq)
+                       })
+    out_vec <- c(out_list, recursive = TRUE)
+    return(out_vec)
+}
 
-
-system.time({cpp_rand_locs <- cpp_get_sites(seq_lens, seq_freq)})
-#    user  system elapsed
-#   0.028   0.001   0.030
-head(cpp_rand_locs)
-
-
-
+system.time({set.seed(1); cpp_test <- cpp_change_sites(sub_fasta, sub_pos, freq_mat)})
+system.time({set.seed(1); r_test <- change_all_sites(sub_fasta, sub_pos, freq_mat)})
+identical(cpp_test, r_test)
 
 
 
@@ -316,11 +333,32 @@ head(cpp_rand_locs)
 # /////////////////////////////////////
 # /////////////////////////////////////
 
-# Left off: Above took a long time, so I moved onto filtering out areas not adjacent to 
-#           cut sites since this will reduce the fasta file sizes.
+# Left off: Putting the above code together cogently and efficiently
 
 # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+
+
+sourceCpp(code = 
+'#include <Rcpp.h>
+using namespace Rcpp ;
+
+// [[Rcpp::export]]
+IntegerVector match__( IntegerVector x, int i){
+    IntegerVector y;
+    y = x[x == i];
+    return y.size();
+}
+')
+
+
+match__(1:5, 6)
+
+
+
+
 
 
 

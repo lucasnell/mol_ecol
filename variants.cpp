@@ -116,27 +116,25 @@ IntegerVector cpp_get_sites(IntegerVector seq_lens, IntegerMatrix seq_freq) {
     return ran_locs;
 }
 
+// Change sites for 1 sequence
+CharacterVector cpp_change_sites_1s(string seq, IntegerVector positions,
+                                    IntegerMatrix freq_mat, int n_samps) {
 
-// [[Rcpp::export]]
-CharacterVector cpp_change_sites(string seq, IntegerVector positions,
-                                 IntegerMatrix freq_mat) {
-
-    int N = sum(freq_mat(0,_));
     int n_pos = positions.size();
-    CharacterVector out_vec(N);
+    CharacterVector out_vec(n_samps);
     CharacterVector seq_vec;
-    CharacterMatrix seq_mat(N,seq.size());
-    CharacterVector seq_out(N);
+    CharacterMatrix seq_mat(n_samps,seq.size());
+    CharacterVector seq_out(n_samps);
 
-    if (positions.size() == 0) {
-        for (int i = 0; i < N; i++) {
+    if (n_pos == 0) {
+        for (int i = 0; i < n_samps; i++) {
             out_vec[i] = seq;
         }
         return out_vec;
     }
 
     seq_vec = cpp_str_split1(seq);
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < n_samps; i++) {
         seq_mat(i,_) = seq_vec;
     }
 
@@ -151,9 +149,38 @@ CharacterVector cpp_change_sites(string seq, IntegerVector positions,
         tmp_seq = cpp_make_seq(ran_freq);
         seq_mat(_,positions[i]) = tmp_seq;
     }
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < n_samps; i++) {
         tmp_seq = seq_mat(i,_);
         out_vec[i] = cpp_merge_str(tmp_seq);
+    }
+    
+    return out_vec;
+}
+
+
+
+
+// Change sites for multiple sequences
+// [[Rcpp::export]]
+CharacterVector cpp_change_sites(CharacterVector seq_vec, IntegerMatrix positions_mat,
+                                 IntegerMatrix freq_mat) {
+    int n_samps = sum(freq_mat(0,_));
+    int n_seqs = seq_vec.size();
+    int out_seqs = n_seqs * n_samps;
+    CharacterVector out_vec(out_seqs);
+    string seq_i;
+    IntegerVector positions_i;
+    IntegerVector seq_nums = positions_mat(_,0);
+    IntegerVector positions = positions_mat(_,1);
+    CharacterVector new_seqs;
+    int j = 0;
+
+    for (int i = 0; i < n_seqs; i++) {
+        seq_i = seq_vec[i];
+        positions_i = positions[seq_nums == (i + 1)];
+        new_seqs = cpp_change_sites_1s(seq_i, positions_i - 1, freq_mat, n_samps);
+        out_vec[Range(j, j + n_samps - 1)] = new_seqs;
+        j += n_samps;
     }
     
     return out_vec;
