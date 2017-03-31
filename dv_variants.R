@@ -240,15 +240,13 @@ change_sites <- function(seq, positions, freq_mat) {
     
     return(seq_out)
 }
-
-
-
-
-
-
-
-
-
+system.time(replicate(1000, cpp_change_sites(char_fasta[1], seq.int(1, 130, 2), freq_mat)))
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
 #' I am `source`-ing `wr_size_filter.R` to use those objects to first filter the 
 #' fragments by size before removing faraway sequences.
 #' 
@@ -262,16 +260,16 @@ source('wr_size_filter.R')
 test_fasta <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'ApeKI'))) %>% 
     size_filter
 char_fasta <- as.character(test_fasta)
-
+freq_mat <- nt_freq(10, seg_div)
 
 # get_seg_sites <- function(seq_lens, seg_sites)
 # }
 
+library(Rcpp)
+library(RcppArmadillo)
+sourceCpp('variants.cpp')
 
-get_locs <- function(.seq_num, .samp_n, .seq_lens) {
-    ran_locs <- .Internal(sample(.seq_lens[.seq_num], .samp_n, FALSE, NULL))
-    return(ran_locs)
-}
+
 
 
 seq_lens <- nchar(char_fasta)
@@ -281,11 +279,7 @@ rand_seqs <- sort(sample(length(seq_lens), total_seg, replace = TRUE, prob = seq
 seq_freq <- mutate(as_data_frame(table(rand_seqs)), seq = as.integer(rand_seqs)) %>% 
     select(seq, n) %>% 
     as.matrix
-head(seq_freq)
-nrow(seq_freq)
-
-
-
+system.time({cpp_rand_locs <- cpp_get_sites(seq_lens, seq_freq)})
 
 
 
@@ -297,24 +291,21 @@ head(rand_locs)
 
 
 
-library(Rcpp)
-library(RcppArmadillo)
-sourceCpp('variants.cpp')
+
 
 system.time({cpp_rand_locs <- cpp_get_sites(seq_lens, seq_freq)})
 #    user  system elapsed
 #   0.028   0.001   0.030
 head(cpp_rand_locs)
-cpp_rand_locs
-seq_lens[sub_seq_freq[,1]]
 
 
-rm(cpp_rand_locs); invisible(gc())
 
-system.time({sub_rand_locs <- mapply(get_locs, sub_seq_freq[,1], sub_seq_freq[,2],
-       MoreArgs = list(.seq_lens = sub_seq_lens)) %>% 
-    c(recursive = TRUE)})
-head(sub_rand_locs)
+
+
+
+
+
+
 
 
 
@@ -334,26 +325,24 @@ head(sub_rand_locs)
 
 
 # This is an older C++ version of the function in dv_make_strands.R
-library(Rcpp)
-cppFunction(
-    'std::vector<std::string> cut_seqs(std::vector<std::string> seq, int cut_len) {
-        int n = seq.size();
-        int seq_len;
-        std::vector<std::string> output(2 * n);
-        for(int i = 0, j = 0; i < n; i++, j+=2) {
-            seq_len = seq[i].length();
-            if(seq_len < cut_len){
-                output[j] = seq[i];
-            } else {
-                output[j] = seq[i].substr(0, cut_len);
-                output[j+1] = seq[i].substr(seq_len - cut_len, cut_len);
-            }
-        }
-        return output;
-    }'
-)
-
-
+# library(Rcpp)
+# cppFunction(
+#     'std::vector<std::string> cut_seqs(std::vector<std::string> seq, int cut_len) {
+#         int n = seq.size();
+#         int seq_len;
+#         std::vector<std::string> output(2 * n);
+#         for(int i = 0, j = 0; i < n; i++, j+=2) {
+#             seq_len = seq[i].length();
+#             if(seq_len < cut_len){
+#                 output[j] = seq[i];
+#             } else {
+#                 output[j] = seq[i].substr(0, cut_len);
+#                 output[j+1] = seq[i].substr(seq_len - cut_len, cut_len);
+#             }
+#         }
+#         return output;
+#     }'
+# )
 
 
 #' <!--- References for reading and writing fastas
