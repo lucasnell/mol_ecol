@@ -1,4 +1,7 @@
 #include <RcppArmadilloExtensions/sample.h>
+#include <algorithm>
+
+
 // [[Rcpp::depends(RcppArmadillo)]]
 
 using namespace Rcpp;
@@ -44,11 +47,11 @@ string cpp_merge_str(CharacterVector in_strings) {
     return out_str;
 }
 
-vector<string> cpp_str_split1(string in_string, int n = 1) {
+CharacterVector cpp_str_split1(string in_string, int n = 1) {
     
     int num_substr = in_string.length() / n;
     
-    vector<string> out(num_substr);
+    CharacterVector out(num_substr);
     
     for(int j=0; j < num_substr; j++) {
         out[j] = in_string.substr(j*n, n);
@@ -57,19 +60,7 @@ vector<string> cpp_str_split1(string in_string, int n = 1) {
     return out;
 }
 
-List cpp_str_split(vector<string> strings, int n) {
-    
-    int num_strings = strings.size();
-    vector<string> tmp;
-    List out(num_strings);
-    
-    for(int i=0; i < num_strings; i++) {
-        tmp = cpp_str_split1(strings[i], n);
-        out[i] = tmp;
-    }
-    
-    return out;
-}
+
 
 
 // Faster sampling for a single sequence
@@ -119,26 +110,26 @@ IntegerVector cpp_get_sites(IntegerVector seq_lens, IntegerMatrix seq_freq) {
 // Change sites for 1 sequence
 CharacterVector cpp_change_sites_1s(string seq, IntegerVector positions,
                                     IntegerMatrix freq_mat, int n_samps) {
-
+    
     int n_pos = positions.size();
     CharacterVector out_vec(n_samps);
-    CharacterVector seq_vec;
-    CharacterMatrix seq_mat(n_samps,seq.size());
-    CharacterVector seq_out(n_samps);
-
+    
     if (n_pos == 0) {
         for (int i = 0; i < n_samps; i++) {
             out_vec[i] = seq;
         }
         return out_vec;
     }
-
-    seq_vec = cpp_str_split1(seq);
+    
+    CharacterMatrix seq_mat(n_samps,seq.size());
+    CharacterVector seq_out(n_samps);
+    
+    CharacterVector seq_vec = cpp_str_split1(seq);
     for (int i = 0; i < n_samps; i++) {
         seq_mat(i,_) = seq_vec;
     }
 
-    int ran_r = csample_int(Range(0, freq_mat.nrow() - 1), 1)[0];
+    int ran_r = rand() % freq_mat.nrow();
     IntegerVector ran_c = csample_int(Range(0, 4 - 1), 4);
     IntegerVector ran_row = freq_mat(ran_r, _);
     IntegerVector ran_freq = ran_row[ran_c];

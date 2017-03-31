@@ -294,9 +294,6 @@ head(pos_mat)
 
 
 
-sub <- round(length(char_fasta) / 10000)
-sub_fasta <- char_fasta[1:sub]
-sub_pos <- pos_mat[pos_mat[,1] <= sub,]
 
 
 
@@ -307,18 +304,28 @@ change_all_sites <- function(seq_vec, positions_mat, freq_mat) {
                        function(.i) {
                            seq <- seq_vec[.i]
                            positions_i <- positions[seq_nums == .i]
-                           new_seq <- change_sites(seq, positions_i, freq_mat)
-                           return(new_seq)
+                           new_seqs <- change_sites(seq, positions_i, freq_mat)
+                           return(new_seqs)
                        })
     out_vec <- c(out_list, recursive = TRUE)
     return(out_vec)
 }
 
-system.time({set.seed(1); cpp_test <- cpp_change_sites(sub_fasta, sub_pos, freq_mat)})
-system.time({set.seed(1); r_test <- change_all_sites(sub_fasta, sub_pos, freq_mat)})
-identical(cpp_test, r_test)
+sub <- round(length(char_fasta) / 100)
+sub_fasta <- char_fasta[1:sub]
+sub_pos <- pos_mat[pos_mat[,1] <= sub,]
 
 
+
+
+
+set.seed(1); system.time({cpp_test <- cpp_change_sites(sub_fasta, sub_pos, freq_mat)})
+set.seed(1); system.time({r_test <- change_all_sites(sub_fasta, sub_pos, freq_mat)})
+identical(nchar(cpp_test), nchar(r_test))
+#
+for (i in seq(1, length(cpp_test)-9, 10)) {
+    # cpp_
+}
 
 
 
@@ -339,24 +346,151 @@ identical(cpp_test, r_test)
 # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 
+# // #include <algorithm>
 
 
 sourceCpp(code = 
-'#include <Rcpp.h>
+'#include <RcppArmadilloExtensions/sample.h>
+
+
+
+// [[Rcpp::depends(RcppArmadillo)]]
+
 using namespace Rcpp ;
+using namespace std;
 
 // [[Rcpp::export]]
-IntegerVector match__( IntegerVector x, int i){
-    IntegerVector y;
-    y = x[x == i];
-    return y.size();
+IntegerVector csamp1(IntegerVector x, int size,
+                          bool replace = false, 
+                          NumericVector prob = NumericVector::create()) {
+    IntegerVector ret = RcppArmadillo::sample(x, size, replace, prob);
+    return ret;
+}
+
+// csample_int(Range(0, freq_mat.nrow() - 1), 1)[0];
+// IntegerVector ran_c = csample_int(Range(0, 4 - 1), 4)
+
+// // [[Rcpp::export]]
+// IntegerVector csamp2(IntegerVector x, int size) {
+//     NumericVector rret = runif(x.size());
+//     
+//     IntegerVector ret;
+//     return ret;
+// }
+
+// [[Rcpp::export]]
+IntegerVector csamp2(IntegerVector cards_) {
+    random_shuffle(cards_.begin(), cards_.end());
+    return cards_;
+}
+
+uint32_t xor128(void) {
+    static uint32_t x = 123456789;
+    static uint32_t y = 362436069;
+    static uint32_t z = 521288629;
+    static uint32_t w = 88675123;
+    uint32_t t;
+    t = x ^ (x << 11);   
+    x = y; y = z; z = w;   
+    return w = w ^ (w >> 19) ^ (t ^ (t >> 8));
+}
+
+// // returns values from 1 to 65535 inclusive, period is 65535
+// uint16_t xorshift16(void) {
+//     y16 ^= (y16 << 13);
+//     y16 ^= (y16 >> 9);
+//     return y16 ^= (y16 << 7);
+// }
+
+// [[Rcpp::export]]
+IntegerVector cpp_one_samp(int samp_n, int seq_length) {
+        
+    NumericVector ran_floats;
+    int k=1;
+    
+    IntegerVector ran_locs(samp_n);
+    
+    ran_floats = runif(samp_n, 0, seq_length);
+    ran_locs = ceiling(ran_floats);
+    
+    while (is_true(any(duplicated(ran_locs))) && k < 10) {
+        ran_floats = runif(samp_n, 0, seq_length);
+        ran_locs = ceiling(ran_floats);
+        k += 1;
+    }
+    return ran_locs;
+}
+
+// [[Rcpp::export]]
+IntegerVector cpp_one_samp2(int samp_n, int seq_length) {
+        
+    IntegerVector ran_locs(samp_n);
+    // uint32_t curRand;
+    bool curBool;
+    int k = 0;
+    int j = 1;
+    
+    while (k < samp_n && j < seq_length) {
+        curBool = xor128() & 1;
+        if (curBool) {
+            ran_locs[k] = j;
+            k += 1;
+        }
+        j += 1;
+    }
+    
+    return ran_locs;
+}
+
+
+// [[Rcpp::export]]
+IntegerVector cpp_one_samp3(int samp_n, int seq_length) {
+    
+    IntegerVector ran_locs(samp_n);
+    // uint32_t curRand;
+    bool curBool;
+    int k = 0;
+    int j = 1;
+    
+    for(int i = 0; i < seq_length; i++) {
+        curBool = xor128() & 1;
+        if (curBool) {
+            ran_locs[k] = j;
+            k += 1;
+            if (k >= samp_n) {
+                break;
+            }
+        }
+    }
+    
+    return ran_locs;
+}
+
+// [[Rcpp::export]]
+bool randBool() {
+    uint32_t curRand = xor128();
+    return curRand & 1;
 }
 ')
 
+system.time(replicate(1e5, sample.int(4, 4)))
+system.time(replicate(1e5, csamp1(1:4, 4)))
+system.time(replicate(1e5, csamp2(1:4)))
 
-match__(1:5, 6)
 
 
+#
+
+# struct seq_position { 
+#     int index;
+#     float random_num;
+# };
+# 
+# struct by_random_num { 
+#     bool operator()(seq_position const &a, seq_position const &b) { 
+#         return a.random_num < b.random_num;
+#     }
+# };
 
 
 
