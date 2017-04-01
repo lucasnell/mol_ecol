@@ -28,6 +28,7 @@ suppressPackageStartupMessages({
     library(dplyr)
     library(ShortRead)
     library(gtools)
+    library(parallel)
 })
 #' 
 #+ set_theme, echo = FALSE
@@ -220,15 +221,13 @@ nt_freq <- function(N, divergence) {
 #' This took 0.012 sec to change 50 positions in a 447-length sequence.
 #' 
 #' 
-change_sites <- function(seq, positions, freq_mat) {
+change_sites <- function(seq, positions, freq_mat, n_samps) {
     
-    N <- sum(freq_mat[1,])
-    
-    if (length(positions) == 0) return(rep(seq, N))
+    if (length(positions) == 0) return(rep(seq, n_samps))
     
     seq_vec <- unlist(.Internal(strsplit(seq, '', FALSE, FALSE, FALSE)))
     
-    seq_mat <- matrix(rep(seq_vec, N), nrow = N, byrow = TRUE)
+    seq_mat <- matrix(rep(seq_vec, n_samps), nrow = n_samps, byrow = TRUE)
     
     ran_freq <- freq_mat[sample(nrow(freq_mat), 1), sample(4)]
     new_nucs <- sapply(positions, 
@@ -240,8 +239,6 @@ change_sites <- function(seq, positions, freq_mat) {
     
     return(seq_out)
 }
-system.time(replicate(1000, change_sites(char_fasta[1], seq.int(1, 130, 2), freq_mat)))
-system.time(replicate(1000, cpp_change_sites(char_fasta[1], seq.int(1, 130, 2), freq_mat)))
 #' 
 #' 
 #' 
@@ -271,6 +268,7 @@ library(RcppArmadillo)
 sourceCpp('variants.cpp')
 
 
+
 get_sites <- function(.seq_num, .samp_n, .seq_lens) {
     ran_locs <- .Internal(sample(.seq_lens[.seq_num], .samp_n, FALSE, NULL))
     return(ran_locs)
@@ -296,40 +294,86 @@ head(pos_mat)
 
 
 
-
-change_all_sites <- function(seq_vec, positions_mat, freq_mat) {
+change_all_sites <- function(seq_vec, in_seq_nums, positions_mat, freq_mat) {
     seq_nums <- positions_mat[,1]
     positions <- positions_mat[,2]
-    out_list <- lapply(1:length(seq_vec), 
-                       function(.i) {
-                           seq <- seq_vec[.i]
-                           positions_i <- positions[seq_nums == .i]
-                           new_seqs <- change_sites(seq, positions_i, freq_mat)
-                           return(new_seqs)
-                       })
+    n_samps <- sum(freq_mat[1,])
+    if (length(in_seq_nums) != length(seq_vec)) {
+        stop('in_seq_nums should be same length as seq_vec')
+    }
+    out_list <- 
+        # mclapply(1:length(seq_vec),
+        lapply(1:length(seq_vec),
+               function(.i) {
+                   seq <- seq_vec[.i]
+                   seq_n <- in_seq_nums[.i]
+                   positions_i <- positions[seq_nums == seq_n] - 1
+                   tryCatch(new_seqs <- cpp_change_sites_1s(seq, positions_i, freq_mat,
+                                                   n_samps),
+                            error = function(e) stop('Problem sequence is ', seq, ' ', .i,
+                                                     '\n', e))
+                   return(new_seqs)
+                   # }, mc.cores = 3)
+               })
     out_vec <- c(out_list, recursive = TRUE)
     return(out_vec)
 }
 
-sub <- round(length(char_fasta) / 100)
-sub_fasta <- char_fasta[1:sub]
-sub_pos <- pos_mat[pos_mat[,1] <= sub,]
+
+
+sub <- round(length(char_fasta) / 10)
+set.seed(8); sub_seqs <- sample(length(char_fasta), sub)
+sub_fasta <- char_fasta[sub_seqs]
+sub_pos <- pos_mat[pos_mat[,1] %in% sub_seqs,]
+
+char_fasta[sub_seqs[4]]
+pos_mat[pos_mat[,1] == sub_seqs[4],]
+
+cpp_change_sites_1s(char_fasta[sub_seqs[1897]], pos_mat[pos_mat[,1] == sub_seqs[1897],2]-1,
+                    freq_mat, 10)
+
+# length(char_fasta[nchar(char_fasta) == min(nchar(char_fasta))])
+
+
+
+# set.seed(1); system.time({r_test <- change_all_sites(char_fasta, pos_mat, freq_mat)})
+set.seed(1); system.time({r_test <- change_all_sites(sub_fasta, sub_seqs, sub_pos, freq_mat)})
+#    user  system elapsed
+#   0.695   0.275   0.994 
 
 
 
 
-
-set.seed(1); system.time({cpp_test <- cpp_change_sites(sub_fasta, sub_pos, freq_mat)})
-set.seed(1); system.time({r_test <- change_all_sites(sub_fasta, sub_pos, freq_mat)})
 identical(nchar(cpp_test), nchar(r_test))
+identical(cpp_test, r_test)
 #
-for (i in seq(1, length(cpp_test)-9, 10)) {
-    # cpp_
+
+compare_pw <- function(cpp_test, r_test) {
+    pw_df <- lapply(
+        seq(1, length(cpp_test)-9, 10), 
+        function(i) {
+            cpp_i <- cpp_test[i:(i+9)] %>% 
+                lapply(function(.s) unlist(.Internal(strsplit(.s, '', F, F, F)))) %>% 
+                do.call(what = cbind, args = .) %>% 
+                apply(1, cpp_merge_str) %>% 
+                pw_comp %>% mean
+            r_i <- r_test[i:(i+9)] %>% 
+                lapply(function(.s) unlist(.Internal(strsplit(.s, '', F, F, F)))) %>% 
+                do.call(what = cbind, args = .) %>% 
+                apply(1, cpp_merge_str) %>% 
+                pw_comp %>% mean
+            data.frame(cpp = cpp_i, r = r_i)
+        }) %>% 
+        bind_rows %>% 
+        as.tbl %>% 
+        mutate(diff = cpp - r)
+    return(pw_df)
 }
 
 
-
-
+system.time(comp_df <- compare_pw(cpp_test, r_test))
+comp_df %>% 
+    summarize(m = mean(diff), s = sd(diff))
 
 
 
@@ -348,149 +392,16 @@ for (i in seq(1, length(cpp_test)-9, 10)) {
 
 # // #include <algorithm>
 
-
 sourceCpp(code = 
 '#include <RcppArmadilloExtensions/sample.h>
 
-
-
 // [[Rcpp::depends(RcppArmadillo)]]
 
-using namespace Rcpp ;
+using namespace Rcpp;
 using namespace std;
 
-// [[Rcpp::export]]
-IntegerVector csamp1(IntegerVector x, int size,
-                          bool replace = false, 
-                          NumericVector prob = NumericVector::create()) {
-    IntegerVector ret = RcppArmadillo::sample(x, size, replace, prob);
-    return ret;
-}
 
-// csample_int(Range(0, freq_mat.nrow() - 1), 1)[0];
-// IntegerVector ran_c = csample_int(Range(0, 4 - 1), 4)
-
-// // [[Rcpp::export]]
-// IntegerVector csamp2(IntegerVector x, int size) {
-//     NumericVector rret = runif(x.size());
-//     
-//     IntegerVector ret;
-//     return ret;
-// }
-
-// [[Rcpp::export]]
-IntegerVector csamp2(IntegerVector cards_) {
-    random_shuffle(cards_.begin(), cards_.end());
-    return cards_;
-}
-
-uint32_t xor128(void) {
-    static uint32_t x = 123456789;
-    static uint32_t y = 362436069;
-    static uint32_t z = 521288629;
-    static uint32_t w = 88675123;
-    uint32_t t;
-    t = x ^ (x << 11);   
-    x = y; y = z; z = w;   
-    return w = w ^ (w >> 19) ^ (t ^ (t >> 8));
-}
-
-// // returns values from 1 to 65535 inclusive, period is 65535
-// uint16_t xorshift16(void) {
-//     y16 ^= (y16 << 13);
-//     y16 ^= (y16 >> 9);
-//     return y16 ^= (y16 << 7);
-// }
-
-// [[Rcpp::export]]
-IntegerVector cpp_one_samp(int samp_n, int seq_length) {
-        
-    NumericVector ran_floats;
-    int k=1;
-    
-    IntegerVector ran_locs(samp_n);
-    
-    ran_floats = runif(samp_n, 0, seq_length);
-    ran_locs = ceiling(ran_floats);
-    
-    while (is_true(any(duplicated(ran_locs))) && k < 10) {
-        ran_floats = runif(samp_n, 0, seq_length);
-        ran_locs = ceiling(ran_floats);
-        k += 1;
-    }
-    return ran_locs;
-}
-
-// [[Rcpp::export]]
-IntegerVector cpp_one_samp2(int samp_n, int seq_length) {
-        
-    IntegerVector ran_locs(samp_n);
-    // uint32_t curRand;
-    bool curBool;
-    int k = 0;
-    int j = 1;
-    
-    while (k < samp_n && j < seq_length) {
-        curBool = xor128() & 1;
-        if (curBool) {
-            ran_locs[k] = j;
-            k += 1;
-        }
-        j += 1;
-    }
-    
-    return ran_locs;
-}
-
-
-// [[Rcpp::export]]
-IntegerVector cpp_one_samp3(int samp_n, int seq_length) {
-    
-    IntegerVector ran_locs(samp_n);
-    // uint32_t curRand;
-    bool curBool;
-    int k = 0;
-    int j = 1;
-    
-    for(int i = 0; i < seq_length; i++) {
-        curBool = xor128() & 1;
-        if (curBool) {
-            ran_locs[k] = j;
-            k += 1;
-            if (k >= samp_n) {
-                break;
-            }
-        }
-    }
-    
-    return ran_locs;
-}
-
-// [[Rcpp::export]]
-bool randBool() {
-    uint32_t curRand = xor128();
-    return curRand & 1;
-}
 ')
-
-system.time(replicate(1e5, sample.int(4, 4)))
-system.time(replicate(1e5, csamp1(1:4, 4)))
-system.time(replicate(1e5, csamp2(1:4)))
-
-
-
-#
-
-# struct seq_position { 
-#     int index;
-#     float random_num;
-# };
-# 
-# struct by_random_num { 
-#     bool operator()(seq_position const &a, seq_position const &b) { 
-#         return a.random_num < b.random_num;
-#     }
-# };
 
 
 

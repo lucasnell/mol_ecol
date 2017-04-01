@@ -8,12 +8,40 @@ using namespace Rcpp;
 using namespace std;
 
 
+
+
+/*
+ ------------
+ RcppArmadillo version of sample function
+ ------------
+*/
 IntegerVector csample_int(IntegerVector x, int size,
                           bool replace = false, 
                           NumericVector prob = NumericVector::create()) {
     IntegerVector ret = RcppArmadillo::sample(x, size, replace, prob);
     return ret;
 }
+
+
+/*
+ ------------
+ Shuffle integer vector
+ ------------
+*/
+
+IntegerVector shuffle_int(IntegerVector in_vec) {
+    random_shuffle(in_vec.begin(), in_vec.end());
+    return in_vec;
+}
+
+
+
+
+/*
+ ------------
+ Make sequence from a vector of frequencies
+ ------------
+*/
 
 // [[Rcpp::export]]
 CharacterVector cpp_make_seq(IntegerVector acgt) {
@@ -34,6 +62,16 @@ CharacterVector cpp_make_seq(IntegerVector acgt) {
     return seq_out;
 }
 
+
+
+
+
+/*
+ ------------
+ Merge a vector of strings into one
+------------
+*/
+
 // [[Rcpp::export]]
 string cpp_merge_str(CharacterVector in_strings) {
     
@@ -46,6 +84,16 @@ string cpp_merge_str(CharacterVector in_strings) {
     
     return out_str;
 }
+
+
+
+
+
+/*
+ ------------
+ Split one string into a vector
+------------
+*/
 
 CharacterVector cpp_str_split1(string in_string, int n = 1) {
     
@@ -63,24 +111,56 @@ CharacterVector cpp_str_split1(string in_string, int n = 1) {
 
 
 
-// Faster sampling for a single sequence
-IntegerVector cpp_one_samp(int samp_n, int seq_length) {
-    
-    NumericVector ran_floats;
-    int k=1;
-    
-    IntegerVector ran_locs(samp_n);
-    
-    ran_floats = runif(samp_n, 0, seq_length);
-    ran_locs = ceiling(ran_floats);
-    
-    while (is_true(any(duplicated(ran_locs))) && k < 10) {
-        ran_floats = runif(samp_n, 0, seq_length);
-        ran_locs = ceiling(ran_floats);
-        k += 1;
-    }
-    return ran_locs;
+/* 
+ ------------
+ Random number generator
+ (From here: http://xoroshiro.di.unimi.it/splitmix64.c)
+ ------------
+*/
+
+uint32_t rng(void) {
+    static uint32_t x = 123456789;
+    static uint32_t y = 362436069;
+    static uint32_t z = 521288629;
+    static uint32_t w = 88675123;
+    uint32_t t;
+    t = x ^ (x << 11);
+    x = y; y = z; z = w;
+    return w = w ^ (w >> 19) ^ (t ^ (t >> 8));
 }
+
+/*
+ ------------
+ Random integer generation, within a range
+ ------------
+*/
+
+float rng_max = 2147483648; // 2^31
+
+// [[Rcpp::export]]
+IntegerVector int_sampler(int num_samps, float range_min, float range_max) {
+    IntegerVector out_vec(num_samps);
+    IntegerVector tmp_vec(num_samps);
+    NumericVector num_vec;
+    int x;
+    for (int i=0; i < num_samps; i++) {
+        x = rng() >> 1;
+        tmp_vec[i] = x;
+    }
+    num_vec = tmp_vec;
+    num_vec = (num_vec * (range_max - range_min) / rng_max) + range_min;
+    out_vec = ceil(num_vec);
+    return out_vec;
+}
+
+
+
+
+/*
+ ------------
+ Get the site locations for multiple sequences
+ ------------
+*/
 
 // [[Rcpp::export]]
 IntegerVector cpp_get_sites(IntegerVector seq_lens, IntegerMatrix seq_freq) {
@@ -99,7 +179,7 @@ IntegerVector cpp_get_sites(IntegerVector seq_lens, IntegerMatrix seq_freq) {
         seq_num = seq_freq(i,0) - 1;
         samp_n = seq_freq(i,1);
         seq_length = seq_lens[seq_num];
-        tmp_locs = cpp_one_samp(samp_n, seq_length);
+        tmp_locs = int_sampler(samp_n, 1, seq_length);
         ran_locs[Range(j, j + samp_n - 1)] = tmp_locs;
         j += samp_n;
     }
@@ -107,7 +187,21 @@ IntegerVector cpp_get_sites(IntegerVector seq_lens, IntegerMatrix seq_freq) {
     return ran_locs;
 }
 
-// Change sites for 1 sequence
+
+
+
+
+
+
+
+
+/*
+ ------------
+ Change sites for 1 sequence
+ ------------
+*/
+
+// [[Rcpp::export]]
 CharacterVector cpp_change_sites_1s(string seq, IntegerVector positions,
                                     IntegerMatrix freq_mat, int n_samps) {
     
@@ -130,7 +224,8 @@ CharacterVector cpp_change_sites_1s(string seq, IntegerVector positions,
     }
 
     int ran_r = rand() % freq_mat.nrow();
-    IntegerVector ran_c = csample_int(Range(0, 4 - 1), 4);
+    IntegerVector ran_c = Range(0, 4 - 1);
+    ran_c = shuffle_int(ran_c);
     IntegerVector ran_row = freq_mat(ran_r, _);
     IntegerVector ran_freq = ran_row[ran_c];
 
@@ -151,29 +246,29 @@ CharacterVector cpp_change_sites_1s(string seq, IntegerVector positions,
 
 
 
-// Change sites for multiple sequences
-// [[Rcpp::export]]
-CharacterVector cpp_change_sites(CharacterVector seq_vec, IntegerMatrix positions_mat,
-                                 IntegerMatrix freq_mat) {
-    int n_samps = sum(freq_mat(0,_));
-    int n_seqs = seq_vec.size();
-    int out_seqs = n_seqs * n_samps;
-    CharacterVector out_vec(out_seqs);
-    string seq_i;
-    IntegerVector positions_i;
-    IntegerVector seq_nums = positions_mat(_,0);
-    IntegerVector positions = positions_mat(_,1);
-    CharacterVector new_seqs;
-    int j = 0;
-
-    for (int i = 0; i < n_seqs; i++) {
-        seq_i = seq_vec[i];
-        positions_i = positions[seq_nums == (i + 1)];
-        new_seqs = cpp_change_sites_1s(seq_i, positions_i - 1, freq_mat, n_samps);
-        out_vec[Range(j, j + n_samps - 1)] = new_seqs;
-        j += n_samps;
-    }
-    
-    return out_vec;
-}
-
+// // Change sites for multiple sequences
+// // [[Rcpp::export]]
+// CharacterVector cpp_change_sites(CharacterVector seq_vec, IntegerMatrix positions_mat,
+//                                  IntegerMatrix freq_mat) {
+//     int n_samps = sum(freq_mat(0,_));
+//     int n_seqs = seq_vec.size();
+//     int out_seqs = n_seqs * n_samps;
+//     CharacterVector out_vec(out_seqs);
+//     string seq_i;
+//     IntegerVector positions_i;
+//     IntegerVector seq_nums = positions_mat(_,0);
+//     IntegerVector positions = positions_mat(_,1);
+//     CharacterVector new_seqs;
+//     int j = 0;
+// 
+//     for (int i = 0; i < n_seqs; i++) {
+//         seq_i = seq_vec[i];
+//         positions_i = positions[seq_nums == (i + 1)];
+//         new_seqs = cpp_change_sites_1s(seq_i, positions_i - 1, freq_mat, n_samps);
+//         out_vec[Range(j, j + n_samps - 1)] = new_seqs;
+//         j += n_samps;
+//     }
+// 
+//     return out_vec;
+// }
+// 
