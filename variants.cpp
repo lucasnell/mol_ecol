@@ -1,26 +1,25 @@
-#include <RcppArmadilloExtensions/sample.h>
+#include <Rcpp.h>
 #include <algorithm>
 
-
-// [[Rcpp::depends(RcppArmadillo)]]
+/*
+ 
+ // RcppArmadillo version of sample function and its dependencies (deprecated for now)
+ 
+ #include <RcppArmadilloExtensions/sample.h>
+ // [[Rcpp::depends(RcppArmadillo)]]
+ 
+ IntegerVector csample_int(IntegerVector x, int size,
+                           bool replace = false, 
+                           NumericVector prob = NumericVector::create()) {
+     IntegerVector ret = RcppArmadillo::sample(x, size, replace, prob);
+     return ret;
+ }
+*/
 
 using namespace Rcpp;
 using namespace std;
 
 
-
-
-/*
- ------------
- RcppArmadillo version of sample function
- ------------
-*/
-IntegerVector csample_int(IntegerVector x, int size,
-                          bool replace = false, 
-                          NumericVector prob = NumericVector::create()) {
-    IntegerVector ret = RcppArmadillo::sample(x, size, replace, prob);
-    return ret;
-}
 
 
 /*

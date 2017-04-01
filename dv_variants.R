@@ -29,6 +29,7 @@ suppressPackageStartupMessages({
     library(ShortRead)
     library(gtools)
     library(parallel)
+    library(Rcpp)
 })
 #' 
 #+ set_theme, echo = FALSE
@@ -260,11 +261,8 @@ test_fasta <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'ApeKI')))
 char_fasta <- as.character(test_fasta)
 freq_mat <- nt_freq(10, seg_div)
 
-# get_seg_sites <- function(seq_lens, seg_sites)
-# }
 
-library(Rcpp)
-library(RcppArmadillo)
+
 sourceCpp('variants.cpp')
 
 
@@ -302,19 +300,15 @@ change_all_sites <- function(seq_vec, in_seq_nums, positions_mat, freq_mat) {
         stop('in_seq_nums should be same length as seq_vec')
     }
     out_list <- 
-        # mclapply(1:length(seq_vec),
-        lapply(1:length(seq_vec),
-               function(.i) {
-                   seq <- seq_vec[.i]
-                   seq_n <- in_seq_nums[.i]
-                   positions_i <- positions[seq_nums == seq_n] - 1
-                   tryCatch(new_seqs <- cpp_change_sites_1s(seq, positions_i, freq_mat,
-                                                   n_samps),
-                            error = function(e) stop('Problem sequence is ', seq, ' ', .i,
-                                                     '\n', e))
-                   return(new_seqs)
-                   # }, mc.cores = 3)
-               })
+        mclapply(1:length(seq_vec),
+                 function(.i) {
+                     seq <- seq_vec[.i]
+                     seq_n <- in_seq_nums[.i]
+                     positions_i <- positions[seq_nums == seq_n] - 1
+                     new_seqs <- cpp_change_sites_1s(seq, positions_i, freq_mat,
+                                                     n_samps)
+                     return(new_seqs)
+                 }, mc.cores = 3)
     out_vec <- c(out_list, recursive = TRUE)
     return(out_vec)
 }
@@ -326,54 +320,15 @@ set.seed(8); sub_seqs <- sample(length(char_fasta), sub)
 sub_fasta <- char_fasta[sub_seqs]
 sub_pos <- pos_mat[pos_mat[,1] %in% sub_seqs,]
 
-char_fasta[sub_seqs[4]]
-pos_mat[pos_mat[,1] == sub_seqs[4],]
-
-cpp_change_sites_1s(char_fasta[sub_seqs[1897]], pos_mat[pos_mat[,1] == sub_seqs[1897],2]-1,
-                    freq_mat, 10)
-
-# length(char_fasta[nchar(char_fasta) == min(nchar(char_fasta))])
-
-
-
-# set.seed(1); system.time({r_test <- change_all_sites(char_fasta, pos_mat, freq_mat)})
 set.seed(1); system.time({r_test <- change_all_sites(sub_fasta, sub_seqs, sub_pos, freq_mat)})
 #    user  system elapsed
-#   0.695   0.275   0.994 
+#   1.304   0.505   0.911
 
 
 
 
-identical(nchar(cpp_test), nchar(r_test))
-identical(cpp_test, r_test)
-#
-
-compare_pw <- function(cpp_test, r_test) {
-    pw_df <- lapply(
-        seq(1, length(cpp_test)-9, 10), 
-        function(i) {
-            cpp_i <- cpp_test[i:(i+9)] %>% 
-                lapply(function(.s) unlist(.Internal(strsplit(.s, '', F, F, F)))) %>% 
-                do.call(what = cbind, args = .) %>% 
-                apply(1, cpp_merge_str) %>% 
-                pw_comp %>% mean
-            r_i <- r_test[i:(i+9)] %>% 
-                lapply(function(.s) unlist(.Internal(strsplit(.s, '', F, F, F)))) %>% 
-                do.call(what = cbind, args = .) %>% 
-                apply(1, cpp_merge_str) %>% 
-                pw_comp %>% mean
-            data.frame(cpp = cpp_i, r = r_i)
-        }) %>% 
-        bind_rows %>% 
-        as.tbl %>% 
-        mutate(diff = cpp - r)
-    return(pw_df)
-}
 
 
-system.time(comp_df <- compare_pw(cpp_test, r_test))
-comp_df %>% 
-    summarize(m = mean(diff), s = sd(diff))
 
 
 
@@ -426,6 +381,30 @@ using namespace std;
 #         return output;
 #     }'
 # )
+
+
+
+# compare_pw <- function(cpp_test, r_test) {
+#     pw_df <- lapply(
+#         seq(1, length(cpp_test)-9, 10), 
+#         function(i) {
+#             cpp_i <- cpp_test[i:(i+9)] %>% 
+#                 lapply(function(.s) unlist(.Internal(strsplit(.s, '', F, F, F)))) %>% 
+#                 do.call(what = cbind, args = .) %>% 
+#                 apply(1, cpp_merge_str) %>% 
+#                 pw_comp %>% mean
+#             r_i <- r_test[i:(i+9)] %>% 
+#                 lapply(function(.s) unlist(.Internal(strsplit(.s, '', F, F, F)))) %>% 
+#                 do.call(what = cbind, args = .) %>% 
+#                 apply(1, cpp_merge_str) %>% 
+#                 pw_comp %>% mean
+#             data.frame(cpp = cpp_i, r = r_i)
+#         }) %>% 
+#         bind_rows %>% 
+#         as.tbl %>% 
+#         mutate(diff = cpp - r)
+#     return(pw_df)
+# }
 
 
 #' <!--- References for reading and writing fastas
