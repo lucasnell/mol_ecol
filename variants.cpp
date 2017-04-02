@@ -1,13 +1,25 @@
 #include <RcppArmadilloExtensions/sample.h>
-#include <algorithm>
-
 // [[Rcpp::depends(RcppArmadillo)]]
+
+
+
 
 
 
 using namespace Rcpp;
 using namespace std;
 
+
+/*
+ 
+ #include <RcppParallel.h>
+ 
+ // [[Rcpp::depends(RcppParallel)]]
+ 
+ using namespace RcppParallel;
+ 
+ 
+ */
 
 
 
@@ -112,7 +124,6 @@ IntegerVector cpp_sample(IntegerVector x, int size,
 }
 
 
-
 /*
  ------------
  Random integer generation, within a range
@@ -156,6 +167,23 @@ IntegerVector int_sampler_nr(int num_samps, float range_min, float range_max) {
     return out_vec;
 }
 
+/*
+ ------------
+ Get the site locations for 1 sequence
+ ------------
+*/
+
+// [[Rcpp::export]]
+IntegerVector cpp_one_sites(IntegerVector freq_len_row) {
+    
+    int samp_n = freq_len_row[0];
+    if (samp_n == 0) {
+        return IntegerVector::create();
+    }
+    int seq_length = freq_len_row[1];
+    IntegerVector out_locs = int_sampler_nr(samp_n, 1, seq_length);
+    return out_locs;
+}
 
 
 
@@ -168,23 +196,22 @@ IntegerVector int_sampler_nr(int num_samps, float range_min, float range_max) {
 */
 
 // [[Rcpp::export]]
-IntegerVector cpp_get_sites(IntegerVector seq_lens, IntegerMatrix seq_freq) {
+IntegerVector cpp_get_sites(IntegerMatrix freq_len) {
     
-    int n = seq_freq.nrow();
-    int nn = sum(seq_freq(_,1));
-    int seq_num;
+    int n = freq_len.nrow();
+    int total_seqs = sum(freq_len(_,0));
     int samp_n;
-    int seq_length;
-    int j=0;
+    int j = 0;
     
-    IntegerVector ran_locs(nn);
+    IntegerVector ran_locs(total_seqs);
     IntegerVector tmp_locs;
     
     for(int i = 0; i < n; i++) {
-        seq_num = seq_freq(i,0) - 1;
-        samp_n = seq_freq(i,1);
-        seq_length = seq_lens[seq_num];
-        tmp_locs = int_sampler_nr(samp_n, 1, seq_length);
+        samp_n = freq_len(i,0);
+        if (samp_n == 0) {
+            continue;
+        }
+        tmp_locs = cpp_one_sites(freq_len(i,_));
         ran_locs[Range(j, j + samp_n - 1)] = tmp_locs;
         j += samp_n;
     }
@@ -207,8 +234,8 @@ IntegerVector cpp_get_sites(IntegerVector seq_lens, IntegerMatrix seq_freq) {
 */
 
 // [[Rcpp::export]]
-CharacterVector cpp_change_sites_1s(string seq, IntegerVector positions,
-                                    IntegerMatrix freq_mat, int n_samps) {
+CharacterVector cpp_change(string seq, IntegerVector positions,
+                           IntegerMatrix freq_mat, int n_samps) {
     
     int n_pos = positions.size();
     CharacterVector out_vec(n_samps);
@@ -230,7 +257,7 @@ CharacterVector cpp_change_sites_1s(string seq, IntegerVector positions,
 
     int ran_r = rand() % freq_mat.nrow();
     IntegerVector ran_c = Range(0, 4 - 1);
-    ran_c = shuffle_int(ran_c);
+    random_shuffle(ran_c.begin(), ran_c.end());
     IntegerVector ran_row = freq_mat(ran_r, _);
     IntegerVector ran_freq = ran_row[ran_c];
 
@@ -251,29 +278,136 @@ CharacterVector cpp_change_sites_1s(string seq, IntegerVector positions,
 
 
 
-// // Change sites for multiple sequences
-// // [[Rcpp::export]]
-// CharacterVector cpp_change_sites(CharacterVector seq_vec, IntegerMatrix positions_mat,
-//                                  IntegerMatrix freq_mat) {
-//     int n_samps = sum(freq_mat(0,_));
-//     int n_seqs = seq_vec.size();
-//     int out_seqs = n_seqs * n_samps;
-//     CharacterVector out_vec(out_seqs);
-//     string seq_i;
-//     IntegerVector positions_i;
-//     IntegerVector seq_nums = positions_mat(_,0);
-//     IntegerVector positions = positions_mat(_,1);
-//     CharacterVector new_seqs;
-//     int j = 0;
-// 
-//     for (int i = 0; i < n_seqs; i++) {
-//         seq_i = seq_vec[i];
-//         positions_i = positions[seq_nums == (i + 1)];
-//         new_seqs = cpp_change_sites_1s(seq_i, positions_i - 1, freq_mat, n_samps);
-//         out_vec[Range(j, j + n_samps - 1)] = new_seqs;
-//         j += n_samps;
+
+
+
+
+
+// IntegerVector cpp_one_sites_par(RMatrix<int>::Row freq_len_row) {
+//     
+//     int samp_n = freq_len_row[0];
+//     IntegerVector out_locs;
+//     if (samp_n == 0) {
+//         out_locs = IntegerVector::create();
+//         return out_locs;
 //     }
+//     int seq_length = freq_len_row[1];
+//     out_locs = int_sampler_nr(samp_n, 0, seq_length - 1);
+//     return out_locs;
+// }
 // 
+// CharacterVector cpp_changep(string seq, IntegerVector positions,
+//                             RMatrix<int> freq_mat, int n_samps) {
+//     
+//     int n_pos = positions.size();
+//     CharacterVector out_vec(n_samps);
+//     CharacterVector seq_out(n_samps);
+//     // RVector<string> out_vec(seq_out);
+//     
+//     if (n_pos == 0) {
+//         for (int i = 0; i < n_samps; i++) {
+//             out_vec[i] = seq;
+//         }
+//         return out_vec;
+//     }
+//     
+//     CharacterMatrix seq_mat(n_samps,seq.size());
+//     
+//     CharacterVector seq_vec = cpp_str_split1(seq);
+//     for (int i = 0; i < n_samps; i++) {
+//         seq_mat(i,_) = seq_vec;
+//     }
+//     
+//     int ran_r = rand() % freq_mat.nrow();
+//     IntegerVector ran_c = Range(0, 4 - 1);
+//     random_shuffle(ran_c.begin(), ran_c.end());
+//     RMatrix<int>::Row ran_row = freq_mat.row(ran_r);
+//     IntegerVector ran_freq;
+//     for (int i=0; i < freq_mat.ncol(); i++) {
+//         ran_freq[i] = ran_row[ran_c[i]];
+//     }
+//     
+//     CharacterVector tmp_seq;
+//     
+//     for (int i = 0; i < n_pos; i++) {
+//         tmp_seq = cpp_make_seq(ran_freq);
+//         seq_mat(_,positions[i]) = tmp_seq;
+//     }
+//     for (int i = 0; i < n_samps; i++) {
+//         tmp_seq = seq_mat(i,_);
+//         out_vec[i] = cpp_merge_str(tmp_seq);
+//     }
+//     
 //     return out_vec;
 // }
 // 
+// /*
+// ------------
+// Change sites for multiple locations
+// ------------
+// */
+// 
+// 
+// 
+// struct new_seq : public Worker {
+//     
+//     // frequency-length matrix
+//     const RMatrix<int> freq_len;
+//     // sequence vector
+//     const RVector<string> seqs;
+//     // frequency matrix
+//     const RMatrix<int> freq_mat;
+//     // number of samples
+//     const int n_samps;
+//     
+//     // destination vector
+//     RVector<string> output;
+//     
+//     // initialize with source and destination
+//     new_seq(const IntegerMatrix freq_len, const CharacterVector seqs, 
+//             const IntegerMatrix freq_mat, const int n_samps,
+//             CharacterVector output)
+//         : freq_len(freq_len), seqs(seqs), freq_mat(freq_mat), n_samps(n_samps), 
+//           output(output) {}
+//     
+//     // // Iteratively create new sequences
+//     void operator()(size_t begin, size_t end) {
+//         for (size_t i = begin; i < end; i++) {
+//             RMatrix<int>::Row freq_len_row = freq_len.row(i);
+//             string seq = seqs[i];
+//             IntegerVector sites = cpp_one_sites_par(freq_len_row);
+//             CharacterVector new_seqs = cpp_changep(seq, sites, freq_mat, n_samps);
+//             for (int j = 0; j < new_seqs.size(); j++) {
+//                 output[((i * 10) + j)] = new_seqs[j];
+//             }
+//         }
+//     }
+// };
+// 
+// 
+// 
+// 
+// 
+// // [[Rcpp::export]]
+// CharacterVector cpp_par_newseqs(const IntegerMatrix freq_len, const CharacterVector seqs, 
+//                                     const IntegerMatrix freq_mat, int n_samps) {
+//     
+//     // allocate the matrix we will return
+//     CharacterVector output(seqs.size() * n_samps);
+//     
+//     // create the worker
+//     new_seq new_seq(freq_len, seqs, freq_mat, n_samps, output);
+//     
+//     // call it with parallelFor
+//     parallelFor(0, freq_len.nrow(), new_seq);
+//     
+//     return output;
+// }
+
+
+
+
+
+
+
+

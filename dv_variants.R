@@ -33,6 +33,13 @@ suppressPackageStartupMessages({
     library(RcppArmadillo)
 })
 #' 
+#' Some of this code is written in C++, so I need to load that file.
+#' 
+#+ load_variants
+sourceCpp('variants.cpp')
+#' 
+#' 
+#' 
 #+ set_theme, echo = FALSE
 # This sets the default ggplot theme
 theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
@@ -196,8 +203,9 @@ make_seq <- function(a, c, g, t, return_vec = FALSE) {
 }
 #' 
 #' 
-#' This function creates a nucleotide frequency matrix that coincides closest with
-#' specified divergence at segregated sites and sums to the number of samples.
+#' This function creates a nucleotide frequency matrix containing, in each row, 
+#' nucleotide frequencies that (1) coincides closest with
+#' specified divergence at segregated sites and (2) sum to the number of samples.
 #' The order of the frequencies is not considered important, since I intend
 #' rows in this frequency matrix to be shuffled when used.
 #' 
@@ -215,13 +223,74 @@ nt_freq <- function(N, divergence) {
 }
 #' 
 #' 
+#' 
+#' 
+#' This function returns a `seq_obj` object containing an innner character vector,
+#' matrix, and numeric value.
+#' The first 2 inner objects contain information on each input sequence, and positions in 
+#' output objects coincide with positions in the input `DNAStringSet` object.
+#' So information in row `i` of `freq_len` and position `i` in `seqs` contains info
+#' for the `i`th sequence in the input `DNAStringSet` object.
+#' The matrix `freq_len` contains two columns, one for the number of segregating sites
+#' and one for the length of the sequence.
+#' The character vector `seqs` contains the sequences themselves.
+#' The numeric value (`N`) contains the total number of sequences.
+#' 
+#' These `seq_obj` objects are used for downstream processes, and this function is not
+#' intended to be used outside another function.
+#' 
+#+ make_constr_objs
+setClass(Class = 'seq_obj', representation(seqs = 'character', freq_len = 'matrix', 
+                                           N = 'numeric'))
+constr_objs <- function(dna_ss, seg_prop) {
+    seqs <- as.character(dna_ss)
+    seq_lens <- nchar(seqs)
+    total_seg <- round(sum(seq_lens) * seg_prop, 0)
+    rand_seqs <- sort(.Internal(sample(length(seq_lens), total_seg, replace = TRUE, 
+                                       prob = seq_lens)))
+    freq_len <- table(factor(rand_seqs, levels = 1:length(seq_lens))) %>% 
+        as_data_frame %>% 
+        mutate(len = seq_lens) %>% 
+        select(n, len) %>% 
+        as.matrix
+    if (any(freq_len[,1] > freq_len[,2])) {
+        stop('Retry with different seed.')
+    }
+    seq_obj <- new('seq_obj', freq_len = freq_len, seqs = seqs, N = length(seqs))
+}
+#' 
+#' The inner objects can be accessed as such, for a `seq_obj` named `Z`:
+#' 
+#' ```{r access_seq_obj, eval = FALSE}
+#' Z@freq_len
+#' Z@seqs
+#' Z@N
+#' ```
+#' 
+#' 
+#' 
+#' This function randomly choses locations within a sequence for a given row in a 
+#' `seq_obj@freq_len` matrix.
+#' 
+one_sites <- function(.freq_len_row) {
+    samp_n <- .freq_len_row[1]
+    if (samp_n == 0) {
+        return(integer(0))
+    }
+    seq_length <- .freq_len_row[2]
+    out_locs <- .Internal(sample(seq_length, samp_n, FALSE, NULL))
+    return(out_locs)
+}
+#' 
+#' 
 #' This function changes one sequence to `N` sequences, where `N` is the number of 
 #' samples.
 #' It also introduces variants at the supplied positions.
 #' The variants will conform to the nucleotide frequency matrix that should be created
 #' beforehand (see above for its description).
-#' This took 0.012 sec to change 50 positions in a 447-length sequence.
-#' 
+#' Because this function will be run many times, I wrote it in C++ (function 
+#' `cpp_change` in file `variants.cpp`).
+#' The R version is kept here to show the general process.
 #' 
 change_sites <- function(seq, positions, freq_mat, n_samps) {
     
@@ -241,11 +310,10 @@ change_sites <- function(seq, positions, freq_mat, n_samps) {
     
     return(seq_out)
 }
+
+
 #' 
-#' 
-#' 
-#' 
-#' 
+#' # Testing functions
 #' 
 #' I am `source`-ing `wr_size_filter.R` to use those objects to first filter the 
 #' fragments by size before removing faraway sequences.
@@ -257,39 +325,64 @@ change_sites <- function(seq, positions, freq_mat, n_samps) {
 #+ source_size_filter
 source('wr_size_filter.R')
 #' 
-test_fasta <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'ApeKI'))) %>% 
+dna_ss <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'ApeKI'))) %>% 
     size_filter
-char_fasta <- as.character(test_fasta)
-freq_mat <- nt_freq(10, seg_div)
+divergence = seg_div
+seg_prop = seg_sites
+n_samps = 10
 
 
 
-sourceCpp('variants.cpp')
 
+set.seed(9)
+freq_mat <- nt_freq(n_samps, divergence)
 
+seq_obj <- constr_objs(dna_ss, seg_prop)
+seq_obj@seqs %>% head
+seq_obj@freq_len %>% head
 
-get_sites <- function(.seq_num, .samp_n, .seq_lens) {
-    ran_locs <- .Internal(sample(.seq_lens[.seq_num], .samp_n, FALSE, NULL))
-    return(ran_locs)
+process_one <- function(i) {
+    freq_len_row <- seq_obj@freq_len[i,]
+    seq <- seq_obj@seqs[i]
+    sites <- one_sites(freq_len_row)
+    new_seqs <- cpp_change(seq, sites-1, freq_mat, n_samps)
+    return(new_seqs)
 }
+new_sites <- mclapply(1:seq_obj@N, process_one, mc.cores = 3)
+new_sites <- c(new_sites, recursive = TRUE)
 
-seq_lens <- nchar(char_fasta)
-total_seg <- round(sum(seq_lens) * seg_sites, 0)
-set.seed(8)
-rand_seqs <- sort(sample(length(seq_lens), total_seg, replace = TRUE, prob = seq_lens))
-seq_freq <- mutate(as_data_frame(table(rand_seqs)), seq = as.integer(rand_seqs)) %>% 
-    select(seq, n) %>% 
-    as.matrix
-head(seq_freq)
-system.time({rand_locs <- c(mapply(get_sites, seq_freq[,1], seq_freq[,2],
-                                   MoreArgs = list(.seq_lens = seq_lens)), 
-                            recursive = TRUE)})
-system.time({rand_locs <- cpp_get_sites(seq_lens, seq_freq)})
+
+
+# sourceCpp('variants.cpp')
+
+
+
+system.time({new_sites <- mclapply(1:seq_obj@N, process_one, mc.cores = 3) %>% 
+    c(recursive = TRUE)})
+
+
+
+
+
+
+
+
+# cpp_change(seq, sites-1, freq_mat, n_samps)
+
+# cpp_par_newseqs(freq_len, seqs, freq_mat, n_samps)
+
+
+
+
+
+
+# system.time({rand_locs <- get_sites(freq_len)})
+# system.time({rand_locs <- cpp_get_sites(freq_len)})
 
 pos_mat <- cbind(rand_seqs, rand_locs)
 head(pos_mat)
 
-
+length(rand_locs3)
 
 
 
@@ -306,8 +399,7 @@ change_all_sites <- function(seq_vec, in_seq_nums, positions_mat, freq_mat) {
                      seq <- seq_vec[.i]
                      seq_n <- in_seq_nums[.i]
                      positions_i <- positions[seq_nums == seq_n] - 1
-                     new_seqs <- cpp_change_sites_1s(seq, positions_i, freq_mat,
-                                                     n_samps)
+                     new_seqs <- cpp_change(seq, positions_i, freq_mat, n_samps)
                      return(new_seqs)
                  }, mc.cores = 3)
     out_vec <- c(out_list, recursive = TRUE)
