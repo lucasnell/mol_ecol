@@ -109,46 +109,17 @@ CharacterVector cpp_str_split1(string in_string, int n = 1) {
 
 
 
-
-/* 
- ------------
- Random number generator
- (From here: http://xoroshiro.di.unimi.it/splitmix64.c)
- ------------
-*/
-
-uint32_t rng(void) {
-    static uint32_t x = 123456789;
-    static uint32_t y = 362436069;
-    static uint32_t z = 521288629;
-    static uint32_t w = 88675123;
-    uint32_t t;
-    t = x ^ (x << 11);
-    x = y; y = z; z = w;
-    return w = w ^ (w >> 19) ^ (t ^ (t >> 8));
-}
-
 /*
  ------------
  Random integer generation, within a range
  ------------
 */
 
-float rng_max = 2147483648; // 2^31
-
 // [[Rcpp::export]]
 IntegerVector int_sampler(int num_samps, float range_min, float range_max) {
-    IntegerVector out_vec(num_samps);
-    IntegerVector tmp_vec(num_samps);
-    NumericVector num_vec;
-    int x;
-    for (int i=0; i < num_samps; i++) {
-        x = rng() >> 1;
-        tmp_vec[i] = x;
-    }
-    num_vec = tmp_vec;
-    num_vec = (num_vec * (range_max - range_min) / rng_max) + range_min;
-    out_vec = ceil(num_vec);
+    IntegerVector out_vec;
+    NumericVector tmp_vec = runif(num_samps, range_min - 1, range_max);
+    out_vec = ceil(tmp_vec);
     return out_vec;
 }
 

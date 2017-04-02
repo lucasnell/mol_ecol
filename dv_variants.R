@@ -346,17 +346,68 @@ set.seed(1); system.time({r_test <- change_all_sites(sub_fasta, sub_seqs, sub_po
 
 
 # // #include <algorithm>
+# // #include <RcppArmadilloExtensions/sample.h>
+# // // [[Rcpp::depends(RcppArmadillo)]]
 
+library(Rcpp)
 sourceCpp(code = 
-'#include <RcppArmadilloExtensions/sample.h>
-
-// [[Rcpp::depends(RcppArmadillo)]]
+'#include <Rcpp.h>
 
 using namespace Rcpp;
 using namespace std;
 
+uint32_t rng(void) {
+    static uint32_t x = 123456789;
+    static uint32_t y = 362436069;
+    static uint32_t z = 521288629;
+    static uint32_t w = 88675123;
+    uint32_t t;
+    t = x ^ (x << 11);
+    x = y; y = z; z = w;
+    return w = w ^ (w >> 19) ^ (t ^ (t >> 8));
+}
+
+
+
+float rng_max = 2147483648; // 2^31
+
+// [[Rcpp::export]]
+IntegerVector int_sampler(int num_samps, float range_min, float range_max) {
+    IntegerVector out_vec(num_samps);
+    IntegerVector tmp_vec(num_samps);
+    NumericVector num_vec;
+    uint64_t x;
+    for (int i=0; i < num_samps; i++) {
+        x = rng() >> 1; // <- necessary to keep >= 0
+        tmp_vec[i] = x;
+    }
+    num_vec = tmp_vec;
+    num_vec = (num_vec * (range_max - range_min) / rng_max) + range_min;
+    out_vec = ceil(num_vec);
+    return out_vec;
+}
+
+
+// [[Rcpp::export]]
+IntegerVector int_sampler2(int num_samps, float range_min, float range_max) {
+    IntegerVector out_vec;
+    NumericVector tmp_vec = runif(num_samps, range_min - 1, range_max);
+    out_vec = ceil(tmp_vec);
+    return out_vec;
+}
 
 ')
+
+system.time(a <- replicate(1e6, int_sampler(10, 1, 1000)))
+system.time(b <- replicate(1e6, int_sampler2(10, 1, 1000)))
+
+hist(a)
+hist(b)
+length(b[duplicated(b)]) / length(b)
+
+au <- apply(a, 2, function(x) length(x[duplicated(x)]))
+bu <- apply(b, 2, function(x) length(x[duplicated(x)]))
+
 
 
 
