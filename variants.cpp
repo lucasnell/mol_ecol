@@ -1,20 +1,9 @@
-#include <Rcpp.h>
+#include <RcppArmadilloExtensions/sample.h>
 #include <algorithm>
 
-/*
- 
- // RcppArmadillo version of sample function and its dependencies (deprecated for now)
- 
- #include <RcppArmadilloExtensions/sample.h>
- // [[Rcpp::depends(RcppArmadillo)]]
- 
- IntegerVector csample_int(IntegerVector x, int size,
-                           bool replace = false, 
-                           NumericVector prob = NumericVector::create()) {
-     IntegerVector ret = RcppArmadillo::sample(x, size, replace, prob);
-     return ret;
- }
-*/
+// [[Rcpp::depends(RcppArmadillo)]]
+
+
 
 using namespace Rcpp;
 using namespace std;
@@ -111,17 +100,63 @@ CharacterVector cpp_str_split1(string in_string, int n = 1) {
 
 /*
  ------------
+ RcppArmadillo's version of R's sample function
+------------
+*/
+
+IntegerVector cpp_sample(IntegerVector x, int size,
+                         bool replace = false, 
+                         NumericVector prob = NumericVector::create()) {
+    IntegerVector ret = RcppArmadillo::sample(x, size, replace, prob);
+    return ret;
+}
+
+
+
+/*
+ ------------
  Random integer generation, within a range
  ------------
 */
 
-// [[Rcpp::export]]
 IntegerVector int_sampler(int num_samps, float range_min, float range_max) {
     IntegerVector out_vec;
     NumericVector tmp_vec = runif(num_samps, range_min - 1, range_max);
     out_vec = ceil(tmp_vec);
     return out_vec;
 }
+
+
+/*
+ ------------
+ Random integer generation, within a range, NO replacement
+------------
+*/
+
+IntegerVector int_sampler_nr(int num_samps, float range_min, float range_max) {
+    if ((range_max - range_min + 1) < (num_samps)) {
+        stop("n_samps > range of values; can't sample without replacement");
+    }
+    IntegerVector out_vec;
+    IntegerVector uniques;
+    NumericVector tmp_vec = runif(num_samps, range_min - 1, range_max);
+    out_vec = ceil(tmp_vec);
+    uniques = unique(out_vec);
+    int k = 0;
+    while (out_vec.size() != uniques.size()) {
+        tmp_vec = runif(num_samps, range_min - 1, range_max);
+        out_vec = ceil(tmp_vec);
+        uniques = unique(out_vec);
+        k += 1;
+        if (k > 10) {
+            out_vec = cpp_sample(Range(range_min, range_max), num_samps);
+            break;
+        }
+    }
+    return out_vec;
+}
+
+
 
 
 
@@ -149,7 +184,7 @@ IntegerVector cpp_get_sites(IntegerVector seq_lens, IntegerMatrix seq_freq) {
         seq_num = seq_freq(i,0) - 1;
         samp_n = seq_freq(i,1);
         seq_length = seq_lens[seq_num];
-        tmp_locs = int_sampler(samp_n, 1, seq_length);
+        tmp_locs = int_sampler_nr(samp_n, 1, seq_length);
         ran_locs[Range(j, j + samp_n - 1)] = tmp_locs;
         j += samp_n;
     }
