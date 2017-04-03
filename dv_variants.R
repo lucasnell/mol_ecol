@@ -228,9 +228,9 @@ nt_freq <- function(N, divergence) {
 #' This function returns a `seq_obj` object containing an innner character vector,
 #' matrix, and numeric value.
 #' The first 2 inner objects contain information on each input sequence, and positions in 
-#' output objects coincide with positions in the input `DNAStringSet` object.
+#' output objects coincide with positions in the input `DNAStringSet`.
 #' So information in row `i` of `freq_len` and position `i` in `seqs` contains info
-#' for the `i`th sequence in the input `DNAStringSet` object.
+#' for the `i`th sequence in the input `DNAStringSet`.
 #' The matrix `freq_len` contains two columns, one for the number of segregating sites
 #' and one for the length of the sequence.
 #' The character vector `seqs` contains the sequences themselves.
@@ -310,8 +310,44 @@ change_sites <- function(seq, positions, freq_mat, n_samps) {
     
     return(seq_out)
 }
-
-
+#' 
+#' 
+#' 
+#' And this function puts everything together. 
+#' It creates a new, variant-filled `DNAStringSet` from one without variants. 
+#' As inputs it takes a `DNAStringSet`, an estimate of divergence at segregating sites
+#' (like `seg_div` above), 
+#' an estimate of the proportion of sites that are segregating,
+#' and the number of samples to output.
+#' I used `parallel::mcapply` to run this in parallel if desired. This part will 
+#' have to be re-coded if parallel processing is desired on a Windows PC.
+#' 
+#' Using 3 cores, 
+#' processing the entire aphid genome took ~8.5 min, 
+#' and processing a digested, size-filtered aphid genome took ~6 sec.
+#' 
+make_variants <- function(dna_ss, divergence, seg_prop, n_samps, cores = 1) {
+    
+    freq_mat <- nt_freq(n_samps, divergence)
+    seq_obj <- constr_objs(dna_ss, seg_prop)
+    
+    .one <- function(i) {
+        freq_len_row <- seq_obj@freq_len[i,]
+        seq <- seq_obj@seqs[i]
+        sites <- one_sites(freq_len_row)
+        new_seqs <- cpp_change(seq, sites - 1, freq_mat, n_samps)
+        return(new_seqs)
+    }
+    if (cores > 1) {
+        new_sites <- mclapply(1:seq_obj@N, .one, mc.cores = cores)
+    } else {
+        new_sites <- lapply(1:seq_obj@N, .one)
+    }
+    new_sites <- c(new_sites, recursive = TRUE)
+    dna_out <- DNAStringSet(new_sites)
+    return(dna_out)
+}
+#' 
 #' 
 #' # Testing functions
 #' 
@@ -325,31 +361,20 @@ change_sites <- function(seq, positions, freq_mat, n_samps) {
 #+ source_size_filter
 source('wr_size_filter.R')
 #' 
-dna_ss <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'ApeKI'))) %>% 
+dna_ss <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'ApeKI'))) %>%
     size_filter
+# dna_ss <- sread(readFasta('./genome_data/aphid_genome.fa.gz'))
 divergence = seg_div
 seg_prop = seg_sites
 n_samps = 10
 
 
+system.time(
+    out_vars <- make_variants(dna_ss, divergence = seg_div, seg_prop = seg_sites,
+                              n_samps = 10, cores = 3)
+)
 
 
-set.seed(9)
-freq_mat <- nt_freq(n_samps, divergence)
-
-seq_obj <- constr_objs(dna_ss, seg_prop)
-seq_obj@seqs %>% head
-seq_obj@freq_len %>% head
-
-process_one <- function(i) {
-    freq_len_row <- seq_obj@freq_len[i,]
-    seq <- seq_obj@seqs[i]
-    sites <- one_sites(freq_len_row)
-    new_seqs <- cpp_change(seq, sites-1, freq_mat, n_samps)
-    return(new_seqs)
-}
-new_sites <- mclapply(1:seq_obj@N, process_one, mc.cores = 3)
-new_sites <- c(new_sites, recursive = TRUE)
 
 
 
@@ -357,7 +382,7 @@ new_sites <- c(new_sites, recursive = TRUE)
 
 
 
-system.time({new_sites <- mclapply(1:seq_obj@N, process_one, mc.cores = 3) %>% 
+system.time({new_sites <- mclapply(1:seq_obj@N, .one, mc.cores = 3) %>% 
     c(recursive = TRUE)})
 
 
