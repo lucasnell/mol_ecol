@@ -176,18 +176,22 @@ a_n <- function(n) {
 #' 
 #' 
 #' 
-#' # Functions to create 
+#' 
+#' 
+#' 
+#' 
+#' # Functions to add variants
+#' 
+#' ## Pairwise comparisons and making sequences
 #' 
 #' 
 #' These functions (1) do pairwise comparisons for a vector of sequences (each sequence
 #' containing one nucleotide for each sample) and (2) create a sequence from a 
 #' specified number of each nucleotide.
 #' 
-pw_comp <- function(seq_vector) {
-    if (length(seq_vector[[1]]) == 1) {
-        seq_vec <- .Internal(strsplit(seq_vector, '', FALSE, FALSE, FALSE))
-    }
-    output <- sapply(seq_vec, 
+pw_comp <- function(seq_vec) {
+    seq_list <- .Internal(strsplit(seq_vec, '', FALSE, FALSE, FALSE))
+    output <- sapply(seq_list, 
                      function(.s) {
                          pw_mat <- t(combn(.s, 2))
                          diffs <- ifelse(pw_mat[,1] == pw_mat[,2], 0, 1)
@@ -202,6 +206,9 @@ make_seq <- function(a, c, g, t, return_vec = FALSE) {
     return(paste(seq_vec, collapse = ''))
 }
 #' 
+#' 
+#' 
+#' ## Create nucleotide frequency matrix
 #' 
 #' This function creates a nucleotide frequency matrix containing, in each row, 
 #' nucleotide frequencies that (1) coincides closest with
@@ -223,6 +230,9 @@ nt_freq <- function(N, divergence) {
 }
 #' 
 #' 
+#' 
+#' 
+#' ## Construct sequence objects
 #' 
 #' 
 #' This function returns a `seq_obj` object containing an innner character vector,
@@ -269,18 +279,27 @@ constr_objs <- function(dna_ss, seg_prop) {
 #' 
 #' 
 #' 
-#' This function randomly choses locations within a sequence for a given row in a 
-#' `seq_obj@freq_len` matrix.
+#' ## Choose random locations in a sequence
+#' 
+#' 
+#' This function randomly choses sites for one sequence
+#' As input, it takes a row in a `seq_obj@freq_len` matrix.
+#' It outputs an integer vector.
 #' 
 one_sites <- function(.freq_len_row) {
-    samp_n <- .freq_len_row[1]
-    if (samp_n == 0) {
+    n_samps <- .freq_len_row[1]
+    if (n_samps == 0) {
         return(integer(0))
     }
     seq_length <- .freq_len_row[2]
-    out_locs <- .Internal(sample(seq_length, samp_n, FALSE, NULL))
+    out_locs <- .Internal(sample(seq_length, n_samps, FALSE, NULL))
     return(out_locs)
 }
+#' 
+#' 
+#' 
+#' 
+#' ## Changing sequences
 #' 
 #' 
 #' This function changes one sequence to `N` sequences, where `N` is the number of 
@@ -292,9 +311,9 @@ one_sites <- function(.freq_len_row) {
 #' `cpp_change` in file `variants.cpp`).
 #' The R version is kept here to show the general process.
 #' 
-change_sites <- function(seq, positions, freq_mat, n_samps) {
+change_seqs <- function(seq, positions, freq_mat, n_samps) {
     
-    if (length(positions) == 0) return(rep(seq, n_samps))
+if (length(positions) == 0) return(rep(seq, n_samps))
     
     seq_vec <- unlist(.Internal(strsplit(seq, '', FALSE, FALSE, FALSE)))
     
@@ -313,7 +332,11 @@ change_sites <- function(seq, positions, freq_mat, n_samps) {
 #' 
 #' 
 #' 
-#' And this function puts everything together. 
+#' 
+#' 
+#' ## Putting everything together
+#' 
+#' 
 #' It creates a new, variant-filled `DNAStringSet` from one without variants. 
 #' As inputs it takes a `DNAStringSet`, an estimate of divergence at segregating sites
 #' (like `seg_div` above), 
@@ -349,208 +372,12 @@ make_variants <- function(dna_ss, divergence, seg_prop, n_samps, cores = 1) {
 }
 #' 
 #' 
-#' # Testing functions
 #' 
-#' I am `source`-ing `wr_size_filter.R` to use those objects to first filter the 
-#' fragments by size before removing faraway sequences.
 #' 
-#+ trick_preamble, echo = FALSE
-# This is to keep `wr_size_filter.R` from source-ing `wr_preamble.R`
-.preamble_sourced <- TRUE
+#' A version of this function is in the file `wr_variants.R`.
 #' 
-#+ source_size_filter
-source('wr_size_filter.R')
 #' 
-dna_ss <- sread(readFasta(sprintf('./genome_data/frags_%s.fa.gz', 'ApeKI'))) %>%
-    size_filter
-# dna_ss <- sread(readFasta('./genome_data/aphid_genome.fa.gz'))
-divergence = seg_div
-seg_prop = seg_sites
-n_samps = 10
-
-
-system.time(
-    out_vars <- make_variants(dna_ss, divergence = seg_div, seg_prop = seg_sites,
-                              n_samps = 10, cores = 3)
-)
-
-
-
-
-
-# sourceCpp('variants.cpp')
-
-
-
-system.time({new_sites <- mclapply(1:seq_obj@N, .one, mc.cores = 3) %>% 
-    c(recursive = TRUE)})
-
-
-
-
-
-
-
-
-# cpp_change(seq, sites-1, freq_mat, n_samps)
-
-# cpp_par_newseqs(freq_len, seqs, freq_mat, n_samps)
-
-
-
-
-
-
-# system.time({rand_locs <- get_sites(freq_len)})
-# system.time({rand_locs <- cpp_get_sites(freq_len)})
-
-pos_mat <- cbind(rand_seqs, rand_locs)
-head(pos_mat)
-
-length(rand_locs3)
-
-
-
-change_all_sites <- function(seq_vec, in_seq_nums, positions_mat, freq_mat) {
-    seq_nums <- positions_mat[,1]
-    positions <- positions_mat[,2]
-    n_samps <- sum(freq_mat[1,])
-    if (length(in_seq_nums) != length(seq_vec)) {
-        stop('in_seq_nums should be same length as seq_vec')
-    }
-    out_list <- 
-        mclapply(1:length(seq_vec),
-                 function(.i) {
-                     seq <- seq_vec[.i]
-                     seq_n <- in_seq_nums[.i]
-                     positions_i <- positions[seq_nums == seq_n] - 1
-                     new_seqs <- cpp_change(seq, positions_i, freq_mat, n_samps)
-                     return(new_seqs)
-                 }, mc.cores = 3)
-    out_vec <- c(out_list, recursive = TRUE)
-    return(out_vec)
-}
-
-
-
-sub <- round(length(char_fasta) / 10)
-set.seed(8); sub_seqs <- sample(length(char_fasta), sub)
-sub_fasta <- char_fasta[sub_seqs]
-sub_pos <- pos_mat[pos_mat[,1] %in% sub_seqs,]
-
-set.seed(1); system.time({r_test <- change_all_sites(sub_fasta, sub_seqs, sub_pos, freq_mat)})
-#    user  system elapsed
-#   2.109   0.918   0.975
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# /////////////////////////////////////
-# /////////////////////////////////////
-
-# Left off: Putting the above code together cogently and efficiently
-
-# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-
-# // #include <algorithm>
-
-library(Rcpp)
-sourceCpp(code = 
-'// #include <Rcpp.h>
-#include <RcppArmadilloExtensions/sample.h>
-// [[Rcpp::depends(RcppArmadillo)]]
-
-using namespace Rcpp;
-using namespace std;
-
-
-// [[Rcpp::export]]
-
-
-')
-
-
-
-
-# This is an older C++ version of the function in dv_make_strands.R
-# library(Rcpp)
-# cppFunction(
-#     'std::vector<std::string> cut_seqs(std::vector<std::string> seq, int cut_len) {
-#         int n = seq.size();
-#         int seq_len;
-#         std::vector<std::string> output(2 * n);
-#         for(int i = 0, j = 0; i < n; i++, j+=2) {
-#             seq_len = seq[i].length();
-#             if(seq_len < cut_len){
-#                 output[j] = seq[i];
-#             } else {
-#                 output[j] = seq[i].substr(0, cut_len);
-#                 output[j+1] = seq[i].substr(seq_len - cut_len, cut_len);
-#             }
-#         }
-#         return output;
-#     }'
-# )
-
-
-
-# compare_pw <- function(cpp_test, r_test) {
-#     pw_df <- lapply(
-#         seq(1, length(cpp_test)-9, 10), 
-#         function(i) {
-#             cpp_i <- cpp_test[i:(i+9)] %>% 
-#                 lapply(function(.s) unlist(.Internal(strsplit(.s, '', F, F, F)))) %>% 
-#                 do.call(what = cbind, args = .) %>% 
-#                 apply(1, cpp_merge_str) %>% 
-#                 pw_comp %>% mean
-#             r_i <- r_test[i:(i+9)] %>% 
-#                 lapply(function(.s) unlist(.Internal(strsplit(.s, '', F, F, F)))) %>% 
-#                 do.call(what = cbind, args = .) %>% 
-#                 apply(1, cpp_merge_str) %>% 
-#                 pw_comp %>% mean
-#             data.frame(cpp = cpp_i, r = r_i)
-#         }) %>% 
-#         bind_rows %>% 
-#         as.tbl %>% 
-#         mutate(diff = cpp - r)
-#     return(pw_df)
-# }
-
-
-#' <!--- References for reading and writing fastas
-# dig_frags <- lapply(setNames(.chosen_enz, .chosen_enz), function(enz) {
-#     fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))
-#     sread(fasta)
-# })
-# writeFasta(write_list[[enz]], file = sprintf('./genome_data/frags_%s.fa.gz', enz), 
-#            mode = 'w', compress = 'gzip')
-# cat(sprintf('%s file finished', enz), '\n')
-#' -->
-
-
-
-
-
-#' (See the `README.md` file for why I'm including `./genome_data/` in file paths.)
-
-
-
-
-
-
-
-
-
-
+#' # Session info
+#' 
+#+ session_info, echo = FALSE
+devtools::session_info()
