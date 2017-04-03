@@ -7,10 +7,10 @@ if(!'.preamble_sourced' %in% ls(all.names = TRUE)) source('wr_preamble.R')
 
 
 # Creating environment for these functions
-digest_env <- new.env()
+.digest_env <- new.env()
 
 # This object stores the restriction enzymes I chose to test:
-digest_env$chosen_enz <- c('ApeKI', 'BstBI', 'BspEI')
+.digest_env$chosen_enz <- c('ApeKI', 'BstBI', 'BspEI')
 
 sourceCpp(code = 
 '#include <Rcpp.h>
@@ -83,7 +83,7 @@ vector<string> cpp_digest(CharacterVector DNAseq, CharacterVector cut_sites) {
     }
     return out_vec;
 }
-', env = digest_env)
+', env = .digest_env)
 
 
 
@@ -103,7 +103,7 @@ digest_genome <- function(dna_ss, enzyme_name) {
     enzyme_sites <- enz_df$sites[enz_df$enzyme == enzyme_name][[1]]
     
     # Converting from DNAStringSet to character vector and running C++ digestion
-    dig_char <- digest_env$cpp_digest(as.character(dna_ss), enzyme_sites)
+    dig_char <- .digest_env$cpp_digest(as.character(dna_ss), enzyme_sites)
     
     dig_ss <- DNAStringSet(dig_char)
     

@@ -1,48 +1,14 @@
 #' ---
 #' title: 'Create structural variants from reference genome'
 #' author: 'Lucas Nell'
-#' date: '24 March 2017'
+#' date: "`r format(Sys.Date(), '%d %B %Y')`"
 #' output: 
 #'   pdf_document:
 #'     toc: true
 #'     number_sections: true
 #' ---
 #' 
-#' *Updated `r format(Sys.Date(), '%d %B %Y')`*
 #' 
-#' 
-#' 
-#' 
-#' 
-#' 
-#' 
-#' 
-#' 
-#' __Loading packages:__
-#' 
-#+ packages
-suppressPackageStartupMessages({
-    library(magrittr)
-    library(ggplot2)
-    library(purrr)
-    library(dplyr)
-    library(ShortRead)
-    library(gtools)
-    library(parallel)
-    library(Rcpp)
-    library(RcppArmadillo)
-})
-#' 
-#' Some of this code is written in C++, so I need to load that file.
-#' 
-#+ load_variants
-sourceCpp('variants.cpp')
-#' 
-#' 
-#' 
-#+ set_theme, echo = FALSE
-# This sets the default ggplot theme
-theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 #' 
 #' 
 #' 
@@ -100,11 +66,15 @@ theta_pi <- 0.0045
 #' [Watterson's (1975)](http://linkinghub.elsevier.com/retrieve/pii/0040580975900209)
 #' estimator ($\theta_w$) is as follows:
 #' 
-#' $$\theta_w = \frac{ K }{ a_n }$$
+#' \begin{align} 
+#' \theta_w = \frac{ K }{ a_n }
+#' \end{align}
 #' 
 #' where $K$ is the proportion of segregating sites. Variable $a_n$ is below:
 #' 
-#' $$a_n = \sum_{i=1}^{n-1} \frac{1}{i}$$
+#' \begin{align} 
+#' a_n = \sum_{i=1}^{n-1} \frac{1}{i}
+#' \end{align}
 #' 
 #' where $n$ is the number of individuals sampled.
 #' Thus the the proportion of segregating sites is simply $K = \theta_w a_n$.
@@ -139,7 +109,9 @@ a_n <- function(n) {
 #' measure of nucleotide diversity, $\theta_{\pi}$, is calculated using the following
 #' equation:
 #' 
-#' $$\theta_\pi = \sum_{ij} x_i x_j \pi_{ij}$$
+#' \begin{align} 
+#' \theta_\pi = \sum_{ij} x_i x_j \pi_{ij}
+#' \end{align}
 #' 
 #' Here, $x_i$ and $x_j$ represent the frequencies of the $i$th and $j$th unique 
 #' sequences respectively and 
@@ -149,17 +121,35 @@ a_n <- function(n) {
 #' If I assume that all lines will be unique sequences—a safe assumption if whole 
 #' genomes are considered—then the above equation can be expressed as follows:
 #' 
-#' $$\theta_\pi = \sum_{ij} \frac{1}{n^2} \pi_{ij}$$
+#' \begin{align} 
+#' \theta_\pi = \frac{1}{n^2} \sum_{ij} \pi_{ij}
+#' \end{align}
 #' 
-#' Then, since the number of total pairwise combinations between $n$ sequences can
-#' be simplified to ${n \choose 2}$, we can use $\bar{\pi}$, the mean proportional 
+#' Then, since the number of total pairwise combinations between $n$ sequences is 
+#' ${n \choose 2}$, we can calculate $\bar{\pi}$, the mean proportional 
 #' sequence divergence between any two sequences, as such:
 #' 
-#' $$\theta_\pi = {n \choose 2} \frac{1}{n^2} \bar{\pi}$$
+#' \begin{align}
+#' \bar{\pi} = \frac{ \sum_{ij} \pi_{ij} }{ {n \choose 2} }
+#' \end{align}
+#' 
+#' Some simple arithmetic gives us...
+#' 
+#' \begin{align}
+#' \sum_{ij} \pi_{ij} = {n \choose 2} \bar{\pi}
+#' \end{align}
+#' 
+#' Now I insert this into equation (4):
+#' 
+#' \begin{align} 
+#' \theta_\pi = \frac{1}{n^2} {n \choose 2} \bar{\pi}
+#' \end{align}
 #' 
 #' Solving for $\bar{\pi}$ yields the following:
 #' 
-#' $$\bar{\pi} = \frac{\theta_\pi n^2}{{n \choose 2}}$$
+#' \begin{align}
+#' \bar{\pi} = \frac{\theta_\pi n^2}{{n \choose 2}}
+#' \end{align}
 #' 
 #' 
 #' Since I've already calculated the proportion of segregated sites, I want the mean
@@ -175,12 +165,37 @@ a_n <- function(n) {
 #' 
 #' 
 #' 
+#' The remainder of this document outlines code to carry out variant creation.
 #' 
 #' 
 #' 
 #' 
 #' 
-#' # Functions to add variants
+#' 
+#' 
+#' # Functions to create variants
+#' 
+#' __Loading packages:__
+#' 
+#+ packages
+suppressPackageStartupMessages({
+    library(magrittr)
+    library(ggplot2)
+    library(purrr)
+    library(dplyr)
+    library(ShortRead)
+    library(gtools)
+    library(parallel)
+    library(Rcpp)
+    library(RcppArmadillo)
+})
+#' 
+#' Some of this code is written in C++, so I need to load that file.
+#' 
+#+ load_variants
+sourceCpp('variants.cpp')
+#' 
+#' 
 #' 
 #' ## Pairwise comparisons and making sequences
 #' 

@@ -11,22 +11,21 @@ if(!'.preamble_sourced' %in% ls(all.names = TRUE)) source('wr_preamble.R')
 suppressPackageStartupMessages({
     library(gtools)
     library(parallel)
-    library(Rcpp)
     library(RcppArmadillo)
 })
 
 
 # Creating environment for these functions
-variant_env <- new.env()
+.variant_env <- new.env()
 
-sourceCpp('variants.cpp', env = variant_env)
-
-
+sourceCpp('variants.cpp', env = .variant_env)
 
 
 
 
-variant_env$pw_comp <- function(seq_vec) {
+
+
+.variant_env$pw_comp <- function(seq_vec) {
     seq_list <- .Internal(strsplit(seq_vec, '', FALSE, FALSE, FALSE))
     output <- sapply(seq_list, 
                      function(.s) {
@@ -40,7 +39,7 @@ variant_env$pw_comp <- function(seq_vec) {
 
 
 
-variant_env$nt_freq <- function(N, divergence) {
+.variant_env$nt_freq <- function(N, divergence) {
     freq_mat <- combinations(N + 1, 4, 0:N, set = FALSE, repeats.allowed = TRUE)
     freq_sums <- rowSums(freq_mat)
     freq_mat <- freq_mat[freq_sums == N,]
@@ -54,7 +53,7 @@ variant_env$nt_freq <- function(N, divergence) {
 
 
 
-variant_env$constr_objs <- function(dna_ss, seg_prop) {
+.variant_env$constr_objs <- function(dna_ss, seg_prop) {
     seqs <- as.character(dna_ss)
     seq_lens <- nchar(seqs)
     total_seg <- round(sum(seq_lens) * seg_prop, 0)
@@ -77,14 +76,14 @@ variant_env$constr_objs <- function(dna_ss, seg_prop) {
 make_variants <- function(dna_ss, n_samps = 10, seg_prop = 0.01414, divergence = 0.7072,
                           cores = 1) {
     
-    freq_mat <- variant_env$nt_freq(n_samps, divergence)
-    seq_obj <- variant_env$constr_objs(dna_ss, seg_prop)
+    freq_mat <- .variant_env$nt_freq(n_samps, divergence)
+    seq_obj <- .variant_env$constr_objs(dna_ss, seg_prop)
     
     .one <- function(i) {
         freq_len_row <- seq_obj$freq_len[i,]
         seq <- seq_obj$seqs[i]
-        sites <- variant_env$cpp_one_sites(freq_len_row)
-        new_seqs <- variant_env$cpp_change(seq, sites - 1, freq_mat, n_samps)
+        sites <- .variant_env$cpp_one_sites(freq_len_row)
+        new_seqs <- .variant_env$cpp_change(seq, sites - 1, freq_mat, n_samps)
         return(new_seqs)
     }
     if (cores > 1) {
