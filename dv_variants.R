@@ -389,7 +389,7 @@ make_variants <- function(dna_ss, divergence, seg_prop, n_samps, cores = 1) {
 #' 
 #' 
 #' 
-#' A version of this function is in the file `wr_variants.R`.
+#' A version of this function is in the file `./wr_files/variants.R`.
 #' 
 #' 
 #' # Session info

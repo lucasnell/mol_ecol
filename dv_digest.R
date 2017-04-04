@@ -16,7 +16,7 @@
 #' In this script I perform in silico digestions of the aphid genome using multiple 
 #' restriction enzymes.
 #' The goal here is to figure out which enzymes to use for simulations.
-#' See [`wr_digest.R`](./wr_digest.R) for working R objects created from this script 
+#' See [`./wr_files/digest.R`](././wr_files/digest.R) for working R objects created from this script 
 #' that are used for downstream processes.
 #' 
 #' 

@@ -4,7 +4,7 @@
 
 # If wr_preamble.R file hasn't been sourced, it needs to be.
 # wr_preamble.R creates the .preamble_sourced object when it's run
-if(!'.preamble_sourced' %in% ls(all.names = TRUE)) source('wr_preamble.R')
+if(!'.preamble_sourced' %in% ls(all.names = TRUE)) source('./wr_files/preamble.R')
 
 
 
@@ -38,18 +38,24 @@ sourceCpp('variants.cpp', env = .variant_env)
 
 
 
-
-.variant_env$nt_freq <- function(N, divergence) {
+.variant_env$nt_freq <- function(N, divergence, verbose = FALSE) {
     freq_mat <- combinations(N + 1, 4, 0:N, set = FALSE, repeats.allowed = TRUE)
     freq_sums <- rowSums(freq_mat)
     freq_mat <- freq_mat[freq_sums == N,]
-    pw_divs <- pw_comp(apply(freq_mat, 1, function(x) cpp_make_seq(x)))
+    pw_strs <- apply(freq_mat, 1, 
+                     function(x) {
+                         .variant_env$cpp_merge_str(.variant_env$cpp_make_seq(x))
+                     })
+    pw_divs <- .variant_env$pw_comp(pw_strs)
     min_diff_inds <- which(abs(pw_divs - divergence) == min(abs(pw_divs - divergence)))
-    cat(sprintf('Minimum absolute difference from divergence = %s\n', 
-                format(min(abs(pw_divs - divergence)), scientific = TRUE, digits = 4)))
+    min_diff_inds <- which(abs(pw_divs - divergence) == min(abs(pw_divs - divergence)))
+    if (verbose) {
+        cat(sprintf('Minimum absolute difference from divergence = %s\n', 
+                    format(min(abs(pw_divs - divergence)), scientific = TRUE, 
+                           digits = 4)))
+    }
     return(freq_mat[min_diff_inds,])
 }
-
 
 
 
@@ -71,12 +77,11 @@ sourceCpp('variants.cpp', env = .variant_env)
 }
 
 
-
-
 make_variants <- function(dna_ss, n_samps = 10, seg_prop = 0.01414, divergence = 0.7072,
                           cores = 1) {
     
     freq_mat <- .variant_env$nt_freq(n_samps, divergence)
+    
     seq_obj <- .variant_env$constr_objs(dna_ss, seg_prop)
     
     .one <- function(i) {
@@ -92,8 +97,26 @@ make_variants <- function(dna_ss, n_samps = 10, seg_prop = 0.01414, divergence =
         new_sites <- lapply(1:seq_obj$N, .one)
     }
     new_sites <- c(new_sites, recursive = TRUE)
-    dna_out <- DNAStringSet(new_sites)
-    return(dna_out)
+    
+    n_seq <- length(new_sites)
+    
+    # Now I'm converting these into a list containing a separate DNAStringSet 
+    # for each sample
+    dna_list <- lapply(
+        1:n_samps, 
+        function(i) {
+            indices <- seq(i, n_seq - n_samps + i, n_samps)
+            seqs <- new_sites[indices]
+            dna_ss_out <- DNAStringSet(seqs)
+            return(dna_ss_out)
+        })
+    
+    return(dna_list)
 }
 
+
+# # Example usage:
+# dna_ss = sread(readFasta('./genome_data/aphid_genome.fa.gz'))
+# dna_ss = dna_ss[1:100]
+# dna_vars <- make_variants(dna_ss)
 

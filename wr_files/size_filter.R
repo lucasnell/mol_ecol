@@ -3,7 +3,7 @@
 
 # If wr_preamble.R file hasn't been sourced, it needs to be.
 # wr_preamble.R creates the .preamble_sourced object when it's run
-if(!'.preamble_sourced' %in% ls(all.names = TRUE)) source('wr_preamble.R')
+if(!'.preamble_sourced' %in% ls(all.names = TRUE)) source('./wr_files/preamble.R')
 
 size_filter <- function(dna_ss) {
     .prob_coef <- 594.6
