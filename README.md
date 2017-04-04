@@ -14,7 +14,7 @@ For a given step, the `.md` or `.pdf` file is the one you should examine to unde
 the code's overall rationale, and the `.R` file includes all the raw R code, which is 
 easier for testing.
 
-__All files starting with `wr_`__ are "working R" files intended to be `source`d and 
+__The folder `wr_files`__ contains "working R" files intended to be `source`d and 
 the objects within used directly.
 
 __The folder `bg_data`__ contains background data on fragment sizes in GBS and on 

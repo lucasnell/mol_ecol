@@ -13,9 +13,9 @@ Lucas Nell
 -   [Creating function to simulate size filtering](#creating-function-to-simulate-size-filtering)
 -   [Session info and package versions](#session-info-and-package-versions)
 
-*Updated 29 March 2017*
+*Updated 03 April 2017*
 
-This script accounts for the fact that in GBS, many potential cut sites are not sequenced, and that the disparity appears to be mostly driven by fragment size. I provide here the rationale for the objects in [`wr_size_filter.R`](./wr_size_filter.R) that filter digested fragments based on fragment size.
+This script accounts for the fact that in GBS, many potential cut sites are not sequenced, and that the disparity appears to be mostly driven by fragment size. I provide here the rationale for the objects in [`./wr_files/size_filter.R`](./wr_files/size_filter.R) that filter digested fragments based on fragment size.
 
 **Loading packages:**
 
@@ -130,7 +130,7 @@ Reading in digestion fragments
 I next need to read fasta files made using the code below that performs in silico digestions of the aphid genome using three different restriction enzymes (the same ones chosen in [dv\_digest.md](./dv_digest.md)). Note that this code should take a while to finish (~10 minutes).
 
 ``` r
-source('wr_digest.R')
+source('./wr_files/digest.R')
 dna_ss <- read_fasta('./genome_data/aphid_genome.fa.gz')
 dna_list <- lapply(c('ApeKI', 'BstBI', 'BspEI'), digest_genome, dna_ss = dna_ss)
 write_fastas(dna_list, sprintf('./genome_data/frags_%s.fa.gz',
@@ -277,13 +277,13 @@ size_filter(dig_frags[['ApeKI']])
     ## [99142]    51 CAGCGGCTGATCTCCAAACTCGTCCTCGCTTATACCGATCCTTTTCTGCGG
     ## [99143]    15 CTGCCGCAAGTATCG
 
-A version `size_filter` is found in file `wr_size_filter.R`. The only difference between that one and the one above is that the one in `wr_size_filter.R` contains the following objects within it:
+A version `size_filter` is found in file `./wr_files/size_filter.R`. The only difference between that one and the one above is that the one in `./wr_files/size_filter.R` contains the following objects within it:
 
 -   `prob_coef`
 -   `prob_dens`
 -   `fast_bern`
 
-`wr_size_filter.R` can be `source`d to do size filtering.
+`./wr_files/size_filter.R` can be `source`d to do size filtering.
 
 Session info and package versions
 =================================
@@ -297,7 +297,7 @@ Session info and package versions
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-03-29
+    ##  date     2017-04-03
 
     ## Packages ------------------------------------------------------------------
 
@@ -327,7 +327,7 @@ Session info and package versions
     ##  IRanges              * 2.8.2    2017-03-18 Bioconductor  
     ##  knitr                  1.15.1   2016-11-22 CRAN (R 3.3.2)
     ##  labeling               0.3      2014-08-23 CRAN (R 3.3.0)
-    ##  lattice                0.20-34  2016-09-06 CRAN (R 3.3.3)
+    ##  lattice                0.20-35  2017-03-25 CRAN (R 3.3.2)
     ##  latticeExtra           0.6-28   2016-02-09 CRAN (R 3.3.0)
     ##  lazyeval               0.2.0    2016-06-12 CRAN (R 3.3.0)
     ##  magrittr             * 1.5      2014-11-22 CRAN (R 3.3.0)

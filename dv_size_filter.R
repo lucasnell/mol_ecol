@@ -16,8 +16,8 @@
 #' This script accounts for the fact that in GBS, many potential cut sites are not 
 #' sequenced, and that the disparity appears to be mostly driven by fragment size.
 #' I provide here the rationale for the objects in 
-#' [`wr_size_filter.R`](./wr_size_filter.R) that filter digested fragments based on 
-#' fragment size.
+#' [`./wr_files/size_filter.R`](./wr_files/size_filter.R) that filter digested 
+#' fragments based on fragment size.
 #' 
 #' 
 #' 
@@ -205,7 +205,7 @@ frag_sizes %>%
 #' Note that this code should take a while to finish (~10 minutes).
 #' 
 #' ```{r, eval = FALSE}
-#' source('wr_digest.R')
+#' source('./wr_files/digest.R')
 #' dna_ss <- read_fasta('./genome_data/aphid_genome.fa.gz')
 #' dna_list <- lapply(c('ApeKI', 'BstBI', 'BspEI'), digest_genome, dna_ss = dna_ss)
 #' write_fastas(dna_list, sprintf('./genome_data/frags_%s.fa.gz',
@@ -409,15 +409,15 @@ size_filter <- function(dna_ss) {
 size_filter(dig_frags[['ApeKI']])
 #' 
 #' 
-#' A version `size_filter` is found in file `wr_size_filter.R`. The only difference
-#' between that one and the one above is that the one in `wr_size_filter.R` contains
-#' the following objects within it:
+#' A version `size_filter` is found in file `./wr_files/size_filter.R`. The only 
+#' difference between that one and the one above is that the one in 
+#' `./wr_files/size_filter.R` contains the following objects within it:
 #' 
 #' * `prob_coef`
 #' * `prob_dens`
 #' * `fast_bern`
 #' 
-#' `wr_size_filter.R` can be `source`d to do size filtering.
+#' `./wr_files/size_filter.R` can be `source`d to do size filtering.
 #' 
 #' 
 #' 

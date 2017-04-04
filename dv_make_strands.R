@@ -104,15 +104,15 @@ make_strands <- function(dna_ss, read_len = 100, bc_len = 4) {
 #' 
 #' # Testing function
 #' 
-#' I am `source`-ing `wr_size_filter.R` to use those objects to first filter the 
+#' I am `source`-ing `./wr_files/size_filter.R` to use those objects to first filter the 
 #' fragments by size before removing faraway sequences.
 #' 
 #+ trick_preamble, echo = FALSE
-# This is to keep `wr_size_filter.R` from source-ing `wr_preamble.R`
+# This is to keep `./wr_files/size_filter.R` from source-ing `./wr_files/preamble.R`
 .preamble_sourced <- TRUE
 #' 
 #+ source_size_filter
-source('wr_size_filter.R')
+source('./wr_files/size_filter.R')
 #' 
 #' Now I read the fasta file and do the filtering by size.
 #' 

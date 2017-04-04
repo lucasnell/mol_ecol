@@ -8,7 +8,7 @@ Lucas Nell
 -   [Testing function](#testing-function)
 -   [Session info](#session-info)
 
-*Updated 29 March 2017*
+*Updated 03 April 2017*
 
 This script tests the function that creates strands to be used for sequencing simulation. It is to be used on digested fragments. It removes regions from fragments that will not be sequenced (those that are far from restriction enzyme cut sites). For each cut-site-adjacent area, it returns a forward and reverse strand, the latter of which is returned as its reverse complement. The reverse complement is returned because I will be simulating sequencing from fragments unidirectionally in the forward direction. I chose to do unidirectional sequencing because this more similarly simulates how both forward and reverse fragment ends can be assigned sequencing primers.
 
@@ -67,10 +67,10 @@ make_strands <- function(dna_ss, read_len = 100, bc_len = 4) {
 Testing function
 ================
 
-I am `source`-ing `wr_size_filter.R` to use those objects to first filter the fragments by size before removing faraway sequences.
+I am `source`-ing `./wr_files/size_filter.R` to use those objects to first filter the fragments by size before removing faraway sequences.
 
 ``` r
-source('wr_size_filter.R')
+source('./wr_files/size_filter.R')
 ```
 
 Now I read the fasta file and do the filtering by size.
@@ -87,25 +87,25 @@ system.time({ms_test <- make_strands(filt_fasta)})
 ```
 
     ##    user  system elapsed 
-    ##   0.408   0.072   0.492
+    ##   0.339   0.034   0.373
 
 ``` r
 ms_test
 ```
 
-    ##   A DNAStringSet instance of length 34918
+    ##   A DNAStringSet instance of length 34966
     ##         width seq
     ##     [1]    96 CGAACTAGAGTAACGTCGTACTTGCACTT...ATCAAAAATTAACTTTTTTGGAACTCAGA
     ##     [2]    96 CGAATATTATTAAAATTTACTAACAAAAA...TTTCGTGCAATTAGATCAATAAGCGGAAA
-    ##     [3]    96 CGAAACATTTTACGACCCTGAAATAGGGT...TCCTAGTTTTGGATGGATCTGTTTTAGTG
-    ##     [4]     7 CGAAATT
-    ##     [5]    96 CGAAATTGCCATATAATTAGAAATGAATG...GGGGTTTACGTTTAAATGTGTTATTTGTG
+    ##     [3]    96 CGAAGAACTTGATCATATTTATGAAAATT...CTAAGGCTTTGAAATAAAATCACACTGAG
+    ##     [4]    96 CGAAACATTTTACGACCCTGAAATAGGGT...TCCTAGTTTTGGATGGATCTGTTTTAGTG
+    ##     [5]     7 CGAAATT
     ##     ...   ... ...
-    ## [34914]    68 AATAAATGAGAATTAAAATATTCCGTATA...ATATATTCTTAACAGTGAATATATATTCG
-    ## [34915]    96 AATTAGTTACGTAATATTTGTAATGTATT...ATAGTTAAAGGAGAAACCCGTATATTTGT
-    ## [34916]    96 AATAATAATGAAAGCCTTACAATAGTTGA...TTAAATGTTCATAACATTAAAGAATTAAT
-    ## [34917]    12 AAAATCATTTCG
-    ## [34918]    96 GGAGAGCTAGTCCTATACTATAAAATGAA...TCTCGTGGTGGAAAAAATTAAACACCGCT
+    ## [34962]    42 AAAATATGGTATTAGTGGTATAATTCAGCCCCCTGCCATTCG
+    ## [34963]    68 AATAAATGAGAATTAAAATATTCCGTATA...ATATATTCTTAACAGTGAATATATATTCG
+    ## [34964]    96 AATTAGTTACGTAATATTTGTAATGTATT...ATAGTTAAAGGAGAAACCCGTATATTTGT
+    ## [34965]    12 AAAATCATTTCG
+    ## [34966]    96 GGAGAGCTAGTCCTATACTATAAAATGAA...TCTCGTGGTGGAAAAAATTAAACACCGCT
 
 Session info
 ============
@@ -119,7 +119,7 @@ Session info
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-03-29
+    ##  date     2017-04-03
 
     ## Packages ------------------------------------------------------------------
 
@@ -140,7 +140,7 @@ Session info
     ##  hwriter                1.3.2    2014-09-10 CRAN (R 3.3.0)
     ##  IRanges              * 2.8.2    2017-03-18 Bioconductor  
     ##  knitr                  1.15.1   2016-11-22 CRAN (R 3.3.2)
-    ##  lattice                0.20-34  2016-09-06 CRAN (R 3.3.3)
+    ##  lattice                0.20-35  2017-03-25 CRAN (R 3.3.2)
     ##  latticeExtra           0.6-28   2016-02-09 CRAN (R 3.3.0)
     ##  magrittr               1.5      2014-11-22 CRAN (R 3.3.0)
     ##  Matrix                 1.2-8    2017-01-20 CRAN (R 3.3.3)
