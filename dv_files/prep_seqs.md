@@ -1,4 +1,4 @@
-Make strands for sequence simulation
+Prepare sequences for sequencing simulation
 ================
 Lucas Nell
 28 March 2017
@@ -8,7 +8,7 @@ Lucas Nell
 -   [Testing function](#testing-function)
 -   [Session info](#session-info)
 
-*Updated 03 April 2017*
+*Updated 06 April 2017*
 
 This script tests the function that creates strands to be used for sequencing simulation. It is to be used on digested fragments. It removes regions from fragments that will not be sequenced (those that are far from restriction enzyme cut sites). For each cut-site-adjacent area, it returns a forward and reverse strand, the latter of which is returned as its reverse complement. The reverse complement is returned because I will be simulating sequencing from fragments unidirectionally in the forward direction. I chose to do unidirectional sequencing because this more similarly simulates how both forward and reverse fragment ends can be assigned sequencing primers.
 
@@ -30,17 +30,17 @@ Elshire, R. J., J. C. Glaubitz, Q. Sun, J. A. Poland, K. Kawamoto, E. S. Buckler
 Function
 ========
 
-The `make_strands` removes portions of fragments that are far from restriction enzyme cut sites. A `DNAStringSet` object of sequence fragments is the required argument. Read length (defaults to 100bp) and barcode length (defaults to 4) are optional arguments. It returns a `DNAStringSet` object with the new sequences as described above. The returned set should have twice as many sequences as the input set of sequences because `make_strands` outputs a sequence for each sequencing strand.
+The `prep_seqs` removes portions of fragments that are far from restriction enzyme cut sites. A `DNAStringSet` object of sequence fragments is the required argument. Read length (defaults to 100bp) and barcode length (defaults to 4) are optional arguments. It returns a `DNAStringSet` object with the new sequences as described above. The returned set should have twice as many sequences as the input set of sequences because `prep_seqs` outputs a sequence for each sequencing strand.
 
 ``` r
-make_strands <- function(dna_ss, read_len = 100, bc_len = 4) {
+prep_seqs <- function(dna_ss, read_len = 100, bc_len = 4) {
     # Length to cut fragment to is simply the read length minus the barcode length and
     # the restriction enzyme's overhang length
     cut_len <- as.integer(read_len - bc_len)
     # Extracting character vector from input DNAStringSet
     character_seqs <- as.character(dna_ss)
-    # Inner function that cuts (i.e., removes) faraways from one sequence
-    .one_cut <- function(.s) {
+    # Inner function that removes areas far from cut sites from one sequence
+    .one_rm <- function(.s) {
         .seq_len <- as.integer(nchar(.s))
         if (.seq_len < cut_len) {
             f_strand <- r_strand <- .s
@@ -51,7 +51,7 @@ make_strands <- function(dna_ss, read_len = 100, bc_len = 4) {
         return(matrix(c(f_strand, r_strand), nrow = 1))
     }
     # applying that inner function to each string in the character vector
-    mat_list <- lapply(character_seqs, .one_cut)
+    mat_list <- lapply(character_seqs, .one_rm)
     cut_seq_char <- do.call(rbind, mat_list)
     # Creating DNAStringSet objects for forward and reverse strands.
     # Because I am doing unidirectional (forward-only) sequencing, I need to make the 
@@ -67,45 +67,45 @@ make_strands <- function(dna_ss, read_len = 100, bc_len = 4) {
 Testing function
 ================
 
-I am `source`-ing `./wr_files/size_filter.R` to use those objects to first filter the fragments by size before removing faraway sequences.
+I am `source`-ing `../wr_files/size_filter.R` to use those objects to first filter the fragments by size before removing faraway sequences.
 
 ``` r
-source('./wr_files/size_filter.R')
+source('../wr_files/size_filter.R')
 ```
 
 Now I read the fasta file and do the filtering by size.
 
 ``` r
-test_fasta <- sread(readFasta('./genome_data/frags_BstBI.fa.gz'))
+test_fasta <- sread(readFasta('../genome_data/frags_BstBI.fa.gz'))
 filt_fasta <- size_filter(test_fasta)
 ```
 
-Below is a run of `make_strands` including the run time and output.
+Below is a run of `prep_seqs` including the run time and output.
 
 ``` r
-system.time({ms_test <- make_strands(filt_fasta)})
+system.time({ps_test <- prep_seqs(filt_fasta)})
 ```
 
     ##    user  system elapsed 
-    ##   0.339   0.034   0.373
+    ##   0.364   0.039   0.405
 
 ``` r
-ms_test
+ps_test
 ```
 
-    ##   A DNAStringSet instance of length 34966
+    ##   A DNAStringSet instance of length 34906
     ##         width seq
     ##     [1]    96 CGAACTAGAGTAACGTCGTACTTGCACTT...ATCAAAAATTAACTTTTTTGGAACTCAGA
     ##     [2]    96 CGAATATTATTAAAATTTACTAACAAAAA...TTTCGTGCAATTAGATCAATAAGCGGAAA
-    ##     [3]    96 CGAAGAACTTGATCATATTTATGAAAATT...CTAAGGCTTTGAAATAAAATCACACTGAG
-    ##     [4]    96 CGAAACATTTTACGACCCTGAAATAGGGT...TCCTAGTTTTGGATGGATCTGTTTTAGTG
-    ##     [5]     7 CGAAATT
+    ##     [3]    96 CGAAACATTTTACGACCCTGAAATAGGGT...TCCTAGTTTTGGATGGATCTGTTTTAGTG
+    ##     [4]     7 CGAAATT
+    ##     [5]    96 CGAAATTGCCATATAATTAGAAATGAATG...GGGGTTTACGTTTAAATGTGTTATTTGTG
     ##     ...   ... ...
-    ## [34962]    42 AAAATATGGTATTAGTGGTATAATTCAGCCCCCTGCCATTCG
-    ## [34963]    68 AATAAATGAGAATTAAAATATTCCGTATA...ATATATTCTTAACAGTGAATATATATTCG
-    ## [34964]    96 AATTAGTTACGTAATATTTGTAATGTATT...ATAGTTAAAGGAGAAACCCGTATATTTGT
-    ## [34965]    12 AAAATCATTTCG
-    ## [34966]    96 GGAGAGCTAGTCCTATACTATAAAATGAA...TCTCGTGGTGGAAAAAATTAAACACCGCT
+    ## [34902]    42 AAAATATGGTATTAGTGGTATAATTCAGCCCCCTGCCATTCG
+    ## [34903]    68 AATAAATGAGAATTAAAATATTCCGTATA...ATATATTCTTAACAGTGAATATATATTCG
+    ## [34904]    96 AATTAGTTACGTAATATTTGTAATGTATT...ATAGTTAAAGGAGAAACCCGTATATTTGT
+    ## [34905]    12 AAAATCATTTCG
+    ## [34906]    96 GGAGAGCTAGTCCTATACTATAAAATGAA...TCTCGTGGTGGAAAAAATTAAACACCGCT
 
 Session info
 ============
@@ -119,7 +119,7 @@ Session info
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-04-03
+    ##  date     2017-04-06
 
     ## Packages ------------------------------------------------------------------
 

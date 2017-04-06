@@ -1,5 +1,5 @@
 #' ---
-#' title: 'Make strands for sequence simulation'
+#' title: 'Prepare sequences for sequencing simulation'
 #' author: 'Lucas Nell'
 #' date: '28 March 2017'
 #' output: 
@@ -60,24 +60,24 @@ suppressPackageStartupMessages(library(ShortRead))
 #' 
 #' # Function
 #' 
-#' The `make_strands` removes portions of fragments that are far from restriction enzyme
+#' The `prep_seqs` removes portions of fragments that are far from restriction enzyme
 #' cut sites.
 #' A `DNAStringSet` object of sequence fragments is the required argument.
 #' Read length (defaults to 100bp) and barcode length (defaults to 4) are optional
 #' arguments.
 #' It returns a `DNAStringSet` object with the new sequences as described above.
 #' The returned set should have twice as many sequences as the input set of sequences
-#' because `make_strands` outputs a sequence for each sequencing strand.
+#' because `prep_seqs` outputs a sequence for each sequencing strand.
 #' 
 #+ make_function
-make_strands <- function(dna_ss, read_len = 100, bc_len = 4) {
+prep_seqs <- function(dna_ss, read_len = 100, bc_len = 4) {
     # Length to cut fragment to is simply the read length minus the barcode length and
     # the restriction enzyme's overhang length
     cut_len <- as.integer(read_len - bc_len)
     # Extracting character vector from input DNAStringSet
     character_seqs <- as.character(dna_ss)
-    # Inner function that cuts (i.e., removes) faraways from one sequence
-    .one_cut <- function(.s) {
+    # Inner function that removes areas far from cut sites from one sequence
+    .one_rm <- function(.s) {
         .seq_len <- as.integer(nchar(.s))
         if (.seq_len < cut_len) {
             f_strand <- r_strand <- .s
@@ -88,7 +88,7 @@ make_strands <- function(dna_ss, read_len = 100, bc_len = 4) {
         return(matrix(c(f_strand, r_strand), nrow = 1))
     }
     # applying that inner function to each string in the character vector
-    mat_list <- lapply(character_seqs, .one_cut)
+    mat_list <- lapply(character_seqs, .one_rm)
     cut_seq_char <- do.call(rbind, mat_list)
     # Creating DNAStringSet objects for forward and reverse strands.
     # Because I am doing unidirectional (forward-only) sequencing, I need to make the 
@@ -104,28 +104,28 @@ make_strands <- function(dna_ss, read_len = 100, bc_len = 4) {
 #' 
 #' # Testing function
 #' 
-#' I am `source`-ing `./wr_files/size_filter.R` to use those objects to first filter the 
+#' I am `source`-ing `../wr_files/size_filter.R` to use those objects to first filter the 
 #' fragments by size before removing faraway sequences.
 #' 
 #+ trick_preamble, echo = FALSE
-# This is to keep `./wr_files/size_filter.R` from source-ing `./wr_files/preamble.R`
+# This is to keep `../wr_files/size_filter.R` from source-ing `../wr_files/preamble.R`
 .preamble_sourced <- TRUE
 #' 
 #+ source_size_filter
-source('./wr_files/size_filter.R')
+source('../wr_files/size_filter.R')
 #' 
 #' Now I read the fasta file and do the filtering by size.
 #' 
 #+ make_filt_fasta
-test_fasta <- sread(readFasta('./genome_data/frags_BstBI.fa.gz'))
+test_fasta <- sread(readFasta('../genome_data/frags_BstBI.fa.gz'))
 filt_fasta <- size_filter(test_fasta)
 #' 
 #' 
-#' Below is a run of `make_strands` including the run time and output.
+#' Below is a run of `prep_seqs` including the run time and output.
 #' 
 #+ run_function
-system.time({ms_test <- make_strands(filt_fasta)})
-ms_test
+system.time({ps_test <- prep_seqs(filt_fasta)})
+ps_test
 #' 
 #' 
 #' 

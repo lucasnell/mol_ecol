@@ -124,7 +124,7 @@ read_fasta <- function(file_name) {
 
 # This function can write ≥ 1 DNAStringSet objects wrapped in a list to a fasta file.
 # You can also input a single DNAStringSet
-write_fastas <- function(dna_ss, file_names = NULL) {
+write_fastas <- function(dna_ss, file_names = NULL, add_seq_names = FALSE) {
     if (class(dna_ss) == 'DNAStringSet') {
         dna_ss <- list(dna_ss)
     } else if (class(dna_ss) != 'list' | any(lapply(dna_ss, class) != 'DNAStringSet')) {
@@ -135,9 +135,13 @@ write_fastas <- function(dna_ss, file_names = NULL) {
     } else if (length(file_names) != length(dna_ss)) {
         stop('dna_ss and file_names must be same length')
     }
-    # Using purrr::map and magrittr::set_names to set sequence names before writing
-    # (Otherwise, each sequence-name line is just ">")
-    write_list <- map(dna_ss, ~ magrittr::set_names(.x, paste0('seq_', 1:length(.x))))
+    if (add_seq_names) {
+        # Using purrr::map and magrittr::set_names to set sequence names before writing
+        # (Otherwise, each sequence-name line is just ">")
+        write_list <- map(dna_ss, ~ magrittr::set_names(.x, paste0('seq_', 1:length(.x))))
+    } else {
+        write_list <- dna_ss
+    }
     for (i in 1:length(write_list)) {
         writeFasta(write_list[[i]], file = file_names[i], mode = 'w', 
                    compress = grepl('.gz', file_names[i]))
