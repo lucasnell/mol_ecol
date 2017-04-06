@@ -16,7 +16,7 @@
 #' This script accounts for the fact that in GBS, many potential cut sites are not 
 #' sequenced, and that the disparity appears to be mostly driven by fragment size.
 #' I provide here the rationale for the objects in 
-#' [`./wr_files/size_filter.R`](./wr_files/size_filter.R) that filter digested 
+#' [`../wr_files/size_filter.R`](../wr_files/size_filter.R) that filter digested 
 #' fragments based on fragment size.
 #' 
 #' 
@@ -87,7 +87,7 @@ rounded_p <- function(vec, round_digits = 4) {
 #' to 4 digits while having the summed proportions still add up to 1.
 #' 
 #+ frag_sizes_df
-frag_sizes <- read_csv('./bg_data/frag_sizes.csv', col_types = 'cd') %>% 
+frag_sizes <- read_csv('../bg_data/frag_sizes.csv', col_types = 'cd') %>% 
     mutate(size = as.integer(rep(seq(50, 1000, 50), each = 2)),
            type = rep(c('predicted', 'sequenced'), 1000 / 50)) %>% 
     select(size, type, prop) %>% 
@@ -201,25 +201,25 @@ frag_sizes %>%
 #' 
 #' I next need to read fasta files made using the code below that performs in silico
 #' digestions of the aphid genome using three different restriction enzymes 
-#' (the same ones chosen in [dv_digest.md](./dv_digest.md)). 
+#' (the same ones chosen in [`../dv_files/digest.md`](../dv_files/digest.md)). 
 #' Note that this code should take a while to finish (~10 minutes).
 #' 
 #' ```{r, eval = FALSE}
-#' source('./wr_files/digest.R')
-#' dna_ss <- read_fasta('./genome_data/aphid_genome.fa.gz')
+#' source('../wr_files/digest.R')
+#' dna_ss <- read_fasta('../genome_data/aphid_genome.fa.gz')
 #' dna_list <- lapply(c('ApeKI', 'BstBI', 'BspEI'), digest_genome, dna_ss = dna_ss)
-#' write_fastas(dna_list, sprintf('./genome_data/frags_%s.fa.gz',
+#' write_fastas(dna_list, sprintf('../genome_data/frags_%s.fa.gz',
 #'                                c('ApeKI', 'BstBI', 'BspEI')))
 #' ```
 #' 
-#' (See the `README.md` file for why I'm including `./genome_data/` in file paths.)
+#' (See the `README.md` file for why I'm including `../genome_data/` in file paths.)
 #' 
 #' The below code reads these fasta files.
 #' 
 #+ read_dig_data
 chosen_enz <- c('ApeKI', 'BstBI', 'BspEI')
 dig_frags <- lapply(setNames(chosen_enz, chosen_enz), function(enz) {
-    fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))
+    fasta <- readFasta(sprintf('../genome_data/frags_%s.fa.gz', enz))
     sread(fasta)
 })
 #' 
@@ -409,15 +409,16 @@ size_filter <- function(dna_ss) {
 size_filter(dig_frags[['ApeKI']])
 #' 
 #' 
-#' A version `size_filter` is found in file `./wr_files/size_filter.R`. The only 
-#' difference between that one and the one above is that the one in 
-#' `./wr_files/size_filter.R` contains the following objects within it:
+#' A version `size_filter` is found in file 
+#' [`../wr_files/size_filter.R`](../wr_files/size_filter.R). 
+#' The only difference between that one and the one above is that the one in 
+#' `../wr_files/size_filter.R` contains the following objects within it:
 #' 
 #' * `prob_coef`
 #' * `prob_dens`
 #' * `fast_bern`
 #' 
-#' `./wr_files/size_filter.R` can be `source`d to do size filtering.
+#' `../wr_files/size_filter.R` can be `source`d to do size filtering.
 #' 
 #' 
 #' 

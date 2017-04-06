@@ -6,3 +6,7 @@
 ddRADseqTools
 test_md*
 genome_data
+*.log
+*.bcf
+*.run.xml
+*.synctex.gz

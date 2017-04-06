@@ -13,9 +13,9 @@ Lucas Nell
 -   [Creating function to simulate size filtering](#creating-function-to-simulate-size-filtering)
 -   [Session info and package versions](#session-info-and-package-versions)
 
-*Updated 03 April 2017*
+*Updated 06 April 2017*
 
-This script accounts for the fact that in GBS, many potential cut sites are not sequenced, and that the disparity appears to be mostly driven by fragment size. I provide here the rationale for the objects in [`./wr_files/size_filter.R`](./wr_files/size_filter.R) that filter digested fragments based on fragment size.
+This script accounts for the fact that in GBS, many potential cut sites are not sequenced, and that the disparity appears to be mostly driven by fragment size. I provide here the rationale for the objects in [`../wr_files/size_filter.R`](../wr_files/size_filter.R) that filter digested fragments based on fragment size.
 
 **Loading packages:**
 
@@ -56,7 +56,7 @@ I used WebPlotDigitizer (arohatgi.info/WebPlotDigitizer/) to extract data from F
 The below code cleans up the csv file. The `rounded_p` function rounds proportion data to 4 digits while having the summed proportions still add up to 1.
 
 ``` r
-frag_sizes <- read_csv('./bg_data/frag_sizes.csv', col_types = 'cd') %>% 
+frag_sizes <- read_csv('../bg_data/frag_sizes.csv', col_types = 'cd') %>% 
     mutate(size = as.integer(rep(seq(50, 1000, 50), each = 2)),
            type = rep(c('predicted', 'sequenced'), 1000 / 50)) %>% 
     select(size, type, prop) %>% 
@@ -67,7 +67,7 @@ frag_sizes <- read_csv('./bg_data/frag_sizes.csv', col_types = 'cd') %>%
 
 This figure showed the difference between the fragment-size distribution (1) predicted from cut site locations in the maize genome and (2) from locations where reads were actually found when sequencing was performed. The figure is reproduced below.
 
-![](dv_size_filter_files/figure-markdown_github/frag_sizes_plot-1.png)
+![](size_filter_files/figure-markdown_github/frag_sizes_plot-1.png)
 
 Fitting a distribution for sequenced fragments
 ----------------------------------------------
@@ -122,29 +122,29 @@ prob_dens <- function(frag_sizes) {
 
 Here is the probability density function (black curve, right y-axis) along with the binned distribution of fragment sizes for sequenced reads (blue bars, left y-axis):
 
-![](dv_size_filter_files/figure-markdown_github/frag_size_plot-1.png)
+![](size_filter_files/figure-markdown_github/frag_size_plot-1.png)
 
 Reading in digestion fragments
 ==============================
 
-I next need to read fasta files made using the code below that performs in silico digestions of the aphid genome using three different restriction enzymes (the same ones chosen in [dv\_digest.md](./dv_digest.md)). Note that this code should take a while to finish (~10 minutes).
+I next need to read fasta files made using the code below that performs in silico digestions of the aphid genome using three different restriction enzymes (the same ones chosen in [`../dv_files/digest.md`](../dv_files/digest.md)). Note that this code should take a while to finish (~10 minutes).
 
 ``` r
-source('./wr_files/digest.R')
-dna_ss <- read_fasta('./genome_data/aphid_genome.fa.gz')
+source('../wr_files/digest.R')
+dna_ss <- read_fasta('../genome_data/aphid_genome.fa.gz')
 dna_list <- lapply(c('ApeKI', 'BstBI', 'BspEI'), digest_genome, dna_ss = dna_ss)
-write_fastas(dna_list, sprintf('./genome_data/frags_%s.fa.gz',
+write_fastas(dna_list, sprintf('../genome_data/frags_%s.fa.gz',
                                c('ApeKI', 'BstBI', 'BspEI')))
 ```
 
-(See the `README.md` file for why I'm including `./genome_data/` in file paths.)
+(See the `README.md` file for why I'm including `../genome_data/` in file paths.)
 
 The below code reads these fasta files.
 
 ``` r
 chosen_enz <- c('ApeKI', 'BstBI', 'BspEI')
 dig_frags <- lapply(setNames(chosen_enz, chosen_enz), function(enz) {
-    fasta <- readFasta(sprintf('./genome_data/frags_%s.fa.gz', enz))
+    fasta <- readFasta(sprintf('../genome_data/frags_%s.fa.gz', enz))
     sread(fasta)
 })
 ```
@@ -195,7 +195,7 @@ where $n$ is the total number of fragments.
  -->
 I tested multiple coefficients to find the one that minimized the absolute difference between the proportion of individuals we would predict would be selected from our *ApeKI*-digested, aphid-genome fragments (i.e., 𝔼(*P*)) and the proportion sequenced from the maize data in Elshire et al. (2011; *P*<sub>*m*</sub>).
 
-![](dv_size_filter_files/figure-markdown_github/get_multiplier-1.png)
+![](size_filter_files/figure-markdown_github/get_multiplier-1.png)
 
 The best coefficient (594.6) was assigned to object `prob_coef`.
 
@@ -277,13 +277,13 @@ size_filter(dig_frags[['ApeKI']])
     ## [99142]    51 CAGCGGCTGATCTCCAAACTCGTCCTCGCTTATACCGATCCTTTTCTGCGG
     ## [99143]    15 CTGCCGCAAGTATCG
 
-A version `size_filter` is found in file `./wr_files/size_filter.R`. The only difference between that one and the one above is that the one in `./wr_files/size_filter.R` contains the following objects within it:
+A version `size_filter` is found in file [`../wr_files/size_filter.R`](../wr_files/size_filter.R). The only difference between that one and the one above is that the one in `../wr_files/size_filter.R` contains the following objects within it:
 
 -   `prob_coef`
 -   `prob_dens`
 -   `fast_bern`
 
-`./wr_files/size_filter.R` can be `source`d to do size filtering.
+`../wr_files/size_filter.R` can be `source`d to do size filtering.
 
 Session info and package versions
 =================================
@@ -297,7 +297,7 @@ Session info and package versions
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-04-03
+    ##  date     2017-04-06
 
     ## Packages ------------------------------------------------------------------
 

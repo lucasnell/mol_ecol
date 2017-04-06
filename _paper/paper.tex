@@ -1,0 +1,72 @@
+\input{preamble}
+
+
+
+\title{\vspace*{-3ex}Simulating GBS data for pooled samples}
+\author{Lucas Nell}
+\date{\vspace*{-3ex}\emph{Spring 2017}}
+
+\begin{document}
+
+\maketitle
+
+
+
+\raggedright
+
+Nei and Li's (1979) measure of nucleotide diversity, $\theta_{\pi}$, is calculated using
+the following equation:
+
+\begin{equation} \label{eq_neili}
+    \theta_\pi = \sum_{ij} x_i x_j \pi_{ij}
+\end{equation}
+
+Here, $x_i$ and $x_j$ represent the frequencies of the $i$th and $j$th unique 
+sequences respectively and 
+$\pi_{ij}$ represents the proportion of divergent sequence between the $i$th and 
+$j$th unique sequences.
+
+If I assume that all lines will be unique sequences—a safe assumption if whole 
+genomes are considered—then the above equation can be expressed as follows:
+
+\begin{equation} \label{eq_unqseq}
+    \theta_\pi = \frac{1}{n^2} \sum_{ij} \pi_{ij}
+\end{equation}
+
+Then, since the number of total pairwise combinations between $n$ sequences is 
+$\binom{n}{2}$, we can calculate $\bar{\pi}$, the mean proportional
+sequence divergence between any two sequences, as such:
+
+% \begin{equation} \label{eq_barpi}
+%     \begin{split}
+%         \bar{\pi} = \frac{ \sum_{ij} \pi_{ij} }{ \binom{n}{2} } \\
+%         \sum_{ij} \pi_{ij} = \binom{n}{2} \bar{\pi}
+%     \end{split}
+% \end{equation}
+
+
+\begin{equation} \label{eq_barpi}
+    \bar{\pi} = \frac{ \sum_{ij} \pi_{ij} }{ \binom{n}{2} }
+\end{equation}
+
+
+Some simple arithmetic gives us...
+
+\begin{equation} \label{eq_sumij}
+    \sum_{ij} \pi_{ij} = \binom{n}{2} \bar{\pi}
+\end{equation}
+
+Now I insert this into equation \ref{eq_unqseq}:
+
+\begin{equation} \label{eq_insbpi}
+    \theta_\pi = \frac{1}{n^2} \binom{n}{2} \bar{\pi}
+\end{equation}
+
+Solving for $\bar{\pi}$ yields the following:
+
+\begin{equation} \label{eq_solvebpi}
+    \bar{\pi} = \frac{\theta_\pi n^2}{\binom{n}{2}}
+\end{equation}
+
+
+\end{document}

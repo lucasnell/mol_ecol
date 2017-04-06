@@ -1,0 +1,48 @@
+
+\documentclass[12pt]{article}
+
+
+\usepackage[letterpaper, margin=1in]{geometry}
+% \usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+
+
+% ---------
+% Paragraph formatting
+% ---------
+\setlength{\parindent}{0in}
+\setlength{\parskip}{2ex}
+\linespread{1}
+
+
+% ---------
+% Figures
+% ---------
+\usepackage{graphicx,setspace}
+% Figures are another directory:
+\graphicspath{{~/Google_Drive/Wisconsin/_Mol_Ecol/_paper/}}
+\usepackage[
+    justification=raggedright,
+    margin=1in,
+    % stretch=0.75,
+    skip=6pt,
+    labelfont=bf
+]{caption}
+
+
+
+% ---------
+% Bibliography and in-text citations
+% ---------
+\usepackage[
+    backend=biber,
+    maxcitenames=2,
+    style=authoryear,
+    % givenits=true,
+    maxbibnames=99,
+    maxcitenames=2
+]{biblatex}
+\addbibresource{~/Dropbox/refs.bib}
+
+
+

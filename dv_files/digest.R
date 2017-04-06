@@ -16,8 +16,8 @@
 #' In this script I perform in silico digestions of the aphid genome using multiple 
 #' restriction enzymes.
 #' The goal here is to figure out which enzymes to use for simulations.
-#' See [`./wr_files/digest.R`](././wr_files/digest.R) for working R objects created from this script 
-#' that are used for downstream processes.
+#' See [`../wr_files/digest.R`](../wr_files/digest.R) for working R objects created 
+#' from this script that are used for downstream processes.
 #' 
 #' 
 #' 
@@ -54,19 +54,19 @@ theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 #' I'm using only 10% for testing because using all sequences takes a long time and 
 #' uses a lot of memory.
 #' 
-#' (See the [`README.md`](./README.md) file for why I'm including `./genome_data/` in 
+#' (See the [`README.md`](../README.md) file for why I'm including `../genome_data/` in 
 #' file paths.)
 #' 
 #+ make_genome
 set.seed(63)
-genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', prop.contigs = 0.1)
+genome_seq <- ref.DNAseq('../genome_data/aphid_genome.fa.gz', prop.contigs = 0.1)
 #' 
 #' 
 #' If you're more patient than me and want to test this script on the entire genome, 
 #' you can run the following code instead:
 #' 
 #' ```{r, eval = FALSE}
-#' genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', subselect.contigs = FALSE)
+#' genome_seq <- ref.DNAseq('../genome_data/aphid_genome.fa.gz', subselect.contigs = FALSE)
 #' ```
 #' 
 #' 

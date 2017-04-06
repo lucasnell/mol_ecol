@@ -18,7 +18,7 @@ suppressPackageStartupMessages({
 # Creating environment for these functions
 .variant_env <- new.env()
 
-sourceCpp('variants.cpp', env = .variant_env)
+sourceCpp('./wr_files/variants.cpp', env = .variant_env)
 
 
 
@@ -92,13 +92,13 @@ make_variants <- function(dna_ss, n_samps = 10, seg_prop = 0.01414, divergence =
         return(new_seqs)
     }
     if (cores > 1) {
-        new_sites <- mclapply(1:seq_obj$N, .one, mc.cores = cores)
+        var_seqs <- mclapply(1:seq_obj$N, .one, mc.cores = cores)
     } else {
-        new_sites <- lapply(1:seq_obj$N, .one)
+        var_seqs <- lapply(1:seq_obj$N, .one)
     }
-    new_sites <- c(new_sites, recursive = TRUE)
+    var_seqs <- c(var_seqs, recursive = TRUE)
     
-    n_seq <- length(new_sites)
+    n_seq <- length(var_seqs)
     
     # Now I'm converting these into a list containing a separate DNAStringSet 
     # for each sample
@@ -106,13 +106,16 @@ make_variants <- function(dna_ss, n_samps = 10, seg_prop = 0.01414, divergence =
         1:n_samps, 
         function(i) {
             indices <- seq(i, n_seq - n_samps + i, n_samps)
-            seqs <- new_sites[indices]
+            seqs <- var_seqs[indices]
             dna_ss_out <- DNAStringSet(seqs)
+            names(dna_ss_out) <- paste0('seq_', 1:(n_seq / n_samps))
             return(dna_ss_out)
         })
     
     return(dna_list)
 }
+
+
 
 
 # # Example usage:

@@ -11,9 +11,9 @@ Lucas Nell
 -   [Choosing enzymes and visualizing fragment sizes](#choosing-enzymes-and-visualizing-fragment-sizes)
 -   [Session info and package versions](#session-info-and-package-versions)
 
-*Updated 28 March 2017*
+*Updated 06 April 2017*
 
-In this script I perform in silico digestions of the aphid genome using multiple restriction enzymes. The goal here is to figure out which enzymes to use for simulations. See [`wr_digest.R`](./wr_digest.R) for working R objects created from this script that are used for downstream processes.
+In this script I perform in silico digestions of the aphid genome using multiple restriction enzymes. The goal here is to figure out which enzymes to use for simulations. See [`../wr_files/digest.R`](../wr_files/digest.R) for working R objects created from this script that are used for downstream processes.
 
 **Loading packages:**
 
@@ -42,17 +42,17 @@ Read genome
 
 This converts the compressed fasta file of the aphid genome to a single string containing a randomly chosen 10% of the sequences in the file. I'm using only 10% for testing because using all sequences takes a long time and uses a lot of memory.
 
-(See the [`README.md`](./README.md) file for why I'm including `./genome_data/` in file paths.)
+(See the [`README.md`](../README.md) file for why I'm including `../genome_data/` in file paths.)
 
 ``` r
 set.seed(63)
-genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', prop.contigs = 0.1)
+genome_seq <- ref.DNAseq('../genome_data/aphid_genome.fa.gz', prop.contigs = 0.1)
 ```
 
 If you're more patient than me and want to test this script on the entire genome, you can run the following code instead:
 
 ``` r
-genome_seq <- ref.DNAseq('./genome_data/aphid_genome.fa.gz', subselect.contigs = FALSE)
+genome_seq <- ref.DNAseq('../genome_data/aphid_genome.fa.gz', subselect.contigs = FALSE)
 ```
 
 Make restriction enzyme data frame
@@ -192,7 +192,7 @@ chosen_enz <- c('ApeKI', 'BstBI', 'BspEI')
 
 Below are histograms of the fragment sizes for the genome digested with each enzyme.
 
-![](dv_digest_files/figure-markdown_github/plot_frag_sizes-1.png)
+![](digest_files/figure-markdown_github/plot_frag_sizes-1.png)
 
 Session info and package versions
 =================================
@@ -206,7 +206,7 @@ Session info and package versions
     ##  language (EN)                        
     ##  collate  en_US.UTF-8                 
     ##  tz       America/Chicago             
-    ##  date     2017-03-28
+    ##  date     2017-04-06
 
     ## Packages ------------------------------------------------------------------
 
@@ -235,7 +235,7 @@ Session info and package versions
     ##  IRanges              * 2.8.2    2017-03-18 Bioconductor  
     ##  knitr                  1.15.1   2016-11-22 CRAN (R 3.3.2)
     ##  labeling               0.3      2014-08-23 CRAN (R 3.3.0)
-    ##  lattice                0.20-34  2016-09-06 CRAN (R 3.3.3)
+    ##  lattice                0.20-35  2017-03-25 CRAN (R 3.3.2)
     ##  latticeExtra           0.6-28   2016-02-09 CRAN (R 3.3.0)
     ##  lazyeval               0.2.0    2016-06-12 CRAN (R 3.3.0)
     ##  magrittr               1.5      2014-11-22 CRAN (R 3.3.0)
