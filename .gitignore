@@ -10,3 +10,4 @@ genome_data
 *.bcf
 *.run.xml
 *.synctex.gz
+test*.RData

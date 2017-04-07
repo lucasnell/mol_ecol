@@ -52,22 +52,13 @@ rm(filtered_fa); invisible(gc())
 # Prep sequences
 # ==============
 
-# Since make_variants returns a list of DNAStringSets for each input DNAStringSet 
+# Since make_variants returns a list of dna objects for each input dna object
 # (1 for each variant), I now have to use nested lapply calls.
-t0 <- Sys.time()
 prepped_fa <- lapply(variant_fa, 
                      function(.dna_ss_list) {
-                         lapply(.dna_ss_list, function(.dna_ss) prep_seqs(.dna_ss))
+                         .dna_list(
+                             lapply(.dna_ss_list, function(.dna_ss) prep_seqs(.dna_ss)))
                      })
-t1 <- Sys.time()
-prepped_fa2 <- lapply(variant_fa, 
-                      function(.dna_ss_list) {
-                          lapply(.dna_ss_list, function(.dna_ss) prep_seqs2(.dna_ss))
-                      })
-t2 <- Sys.time()
-t1 - t0; t2 - t1; rm(t0, t1, t2)
-
-identical(prepped_fa, prepped_fa2)
 
 # rm(variant_fa); invisible(gc())
 # originally took 49 seconds

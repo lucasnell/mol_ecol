@@ -4,28 +4,18 @@
 
 # If wr_preamble.R file hasn't been sourced, it needs to be.
 # wr_preamble.R creates the .preamble_sourced object when it's run
-if(!'.preamble_sourced' %in% ls(all.names = TRUE)) source('./wr_files/preamble.R')
+if(!'.wr_env' %in% ls(all.names = TRUE)) source('./wr_files/preamble.R')
 
 
 
-suppressPackageStartupMessages({
-    library(gtools)
-    library(parallel)
-    library(RcppArmadillo)
-})
-
-
-# Creating environment for these functions
-.variant_env <- new.env()
-
-sourceCpp('./wr_files/variants.cpp', env = .variant_env)
+sourceCpp('./wr_files/variants.cpp', env = .wr_env)
 
 
 
 
 
 
-.variant_env$pw_comp <- function(seq_vec) {
+.wr_env$pw_comp <- function(seq_vec) {
     seq_list <- .Internal(strsplit(seq_vec, '', FALSE, FALSE, FALSE))
     output <- sapply(seq_list, 
                      function(.s) {
@@ -38,15 +28,15 @@ sourceCpp('./wr_files/variants.cpp', env = .variant_env)
 
 
 
-.variant_env$nt_freq <- function(N, divergence, verbose = FALSE) {
+.wr_env$nt_freq <- function(N, divergence, verbose = FALSE) {
     freq_mat <- combinations(N + 1, 4, 0:N, set = FALSE, repeats.allowed = TRUE)
     freq_sums <- rowSums(freq_mat)
     freq_mat <- freq_mat[freq_sums == N,]
     pw_strs <- apply(freq_mat, 1, 
                      function(x) {
-                         .variant_env$cpp_merge_str(.variant_env$cpp_make_seq(x))
+                         .wr_env$cpp_merge_str(.wr_env$cpp_make_seq(x))
                      })
-    pw_divs <- .variant_env$pw_comp(pw_strs)
+    pw_divs <- .wr_env$pw_comp(pw_strs)
     min_diff_inds <- which(abs(pw_divs - divergence) == min(abs(pw_divs - divergence)))
     min_diff_inds <- which(abs(pw_divs - divergence) == min(abs(pw_divs - divergence)))
     if (verbose) {
@@ -59,8 +49,7 @@ sourceCpp('./wr_files/variants.cpp', env = .variant_env)
 
 
 
-.variant_env$constr_objs <- function(dna_ss, seg_prop) {
-    seqs <- as.character(dna_ss)
+.wr_env$constr_objs <- function(seqs, seg_prop) {
     seq_lens <- nchar(seqs)
     total_seg <- round(sum(seq_lens) * seg_prop, 0)
     rand_seqs <- sort(.Internal(sample(length(seq_lens), total_seg, replace = TRUE, 
@@ -77,18 +66,20 @@ sourceCpp('./wr_files/variants.cpp', env = .variant_env)
 }
 
 
-make_variants <- function(dna_ss, n_samps = 10, seg_prop = 0.01414, divergence = 0.7072,
+make_variants <- function(in_dna, n_samps = 10, seg_prop = 0.01414, divergence = 0.7072,
                           cores = 1) {
     
-    freq_mat <- .variant_env$nt_freq(n_samps, divergence)
+    seqs <- as.character(in_dna)
     
-    seq_obj <- .variant_env$constr_objs(dna_ss, seg_prop)
+    freq_mat <- .wr_env$nt_freq(n_samps, divergence)
+    
+    seq_obj <- .wr_env$constr_objs(seqs, seg_prop)
     
     .one <- function(i) {
         freq_len_row <- seq_obj$freq_len[i,]
         seq <- seq_obj$seqs[i]
-        sites <- .variant_env$cpp_one_sites(freq_len_row)
-        new_seqs <- .variant_env$cpp_change(seq, sites - 1, freq_mat, n_samps)
+        sites <- .wr_env$cpp_one_sites(freq_len_row)
+        new_seqs <- .wr_env$cpp_change(seq, sites - 1, freq_mat, n_samps)
         return(new_seqs)
     }
     if (cores > 1) {
@@ -100,26 +91,24 @@ make_variants <- function(dna_ss, n_samps = 10, seg_prop = 0.01414, divergence =
     
     n_seq <- length(var_seqs)
     
-    # Now I'm converting these into a list containing a separate DNAStringSet 
+    # Now I'm converting these into a list containing a separate dna object 
     # for each sample
-    dna_list <- lapply(
+    dna_out <- lapply(
         1:n_samps, 
         function(i) {
             indices <- seq(i, n_seq - n_samps + i, n_samps)
             seqs <- var_seqs[indices]
-            dna_ss_out <- DNAStringSet(seqs)
-            names(dna_ss_out) <- paste0('seq_', 1:(n_seq / n_samps))
-            return(dna_ss_out)
+            return(seqs)
         })
     
-    return(dna_list)
+    return(.dna_list(dna_out))
 }
 
 
 
 
 # # Example usage:
-# dna_ss = sread(readFasta('./genome_data/aphid_genome.fa.gz'))
-# dna_ss = dna_ss[1:100]
-# dna_vars <- make_variants(dna_ss)
+# fasta = read_fasta('./genome_data/aphid_genome.fa.gz')
+# fasta = fasta[1:100]
+# dna_vars <- make_variants(fasta)
 
