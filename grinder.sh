@@ -2,19 +2,21 @@
 
 # Runs grinder simulator on fasta file(s)
 
-
-tot_reads=100
+cd "~/Desktop/gd/fasta"
+tot_reads=10
 out_name=gr_out
-out_dir=~/Desktop/grinder_out
+out_dir=../grinder_out
+digest="ApeKI"
 references=""
-for f in *.fasta
+for f in "${digest}"*.fa.gz
 do
     references+="-reference_file $f "
 done
 
 
 
-grinder "$references" -total_reads $tot_reads -base_name $out_name \
+# grinder "$references" -total_reads $tot_reads -base_name $out_name \
+grinder -rf _ApeKI_s01.fa -total_reads $tot_reads -base_name $out_name \
     -output_dir $out_dir \
     -length_bias 0 -fastq_output 1 -qual_levels 30 10 -unidirectional 1
 

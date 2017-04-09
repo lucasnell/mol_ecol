@@ -2,24 +2,26 @@
 # I first need to source the "working R" files. They will load necessary packages and
 # create functions to do the simulating.
 source('./wr_files/preamble.R')
-source('./wr_files/digest.R')
-source('./wr_files/size_filter.R')
-source('./wr_files/variants.R')
-source('./wr_files/prep_seqs.R')
+wr_files <- list.files('./wr_files', '*.R', full.names = TRUE)
+wr_files <- wr_files[!grepl('preamble.R', wr_files)]
+for (f in wr_files) source(f)
+rm(f, wr_files)
 
 
+t0 <- Sys.time()
 # Reference genome fasta file
 ref_fa <- read_fasta('./genome_data/aphid_genome.fa.gz')
 
 # ==============
 # Digest
 # ==============
-# This is somewhat hidden (in the .digest_env environment), but it's the enzymes I 
+# This is somewhat hidden (in the .wr_env environment), but it's the enzymes I 
 # chose to simulate:
-.digest_env$chosen_enz
+.wr_env$chosen_enz
 
 # Now I'm digesting the reference genome by these restriction enzymes
-digested_fa <- lapply(.digest_env$chosen_enz, function(enz) digest_genome(ref_fa, enz))
+digested_fa <- lapply(.wr_env$chosen_enz, function(enz) digest_genome(ref_fa, enz))
+Sys.time() - t0
 
 # To reduce memory consumption, I'm removing the ref_fa object and running garbage 
 # collection.
@@ -33,6 +35,7 @@ rm(ref_fa); invisible(gc())
 
 set.seed(105)
 filtered_fa <- lapply(digested_fa, function(.dna_ss) size_filter(.dna_ss))
+Sys.time() - t0
 
 rm(digested_fa); invisible(gc())
 
@@ -43,6 +46,7 @@ rm(digested_fa); invisible(gc())
 
 set.seed(195)
 variant_fa <- lapply(filtered_fa, function(.dna_ss) make_variants(.dna_ss))
+Sys.time() - t0
 
 rm(filtered_fa); invisible(gc())
 
@@ -59,9 +63,12 @@ prepped_fa <- lapply(variant_fa,
                          .dna_list(
                              lapply(.dna_ss_list, function(.dna_ss) prep_seqs(.dna_ss)))
                      })
+Sys.time() - t0
 
-# rm(variant_fa); invisible(gc())
-# originally took 49 seconds
+
+rm(variant_fa); invisible(gc())
+
+
 
 
 
@@ -73,14 +80,17 @@ prepped_fa <- lapply(variant_fa,
 
 # The number of new files will be the number of samples times the number of restriction
 # enzymes used.
-# For my case, it was 30 files.
+# In my case, it was 30 files.
 # I output these files to a flash drive because I wasn't sure how large they would be.
+# All 30 (gzipped) files totalled 66.7 MB.
 
+n_samps <- 10
+num_format <- paste0('%0',nchar(n_samps), 'i')
 
-for (i in 1:3) {
+for (i in 1:length(prepped_fa)) {
     write_fastas(prepped_fa[[i]], 
-                 file_names = paste0('/Volumes/64gb/', .digest_env$chosen_enz[i], '_s', 
-                                     1:10, '.fa.gz'))
+                 file_names = paste0('/Volumes/64gb/fasta/', 
+                                     .wr_env$chosen_enz[i], '_s', 
+                                     sprintf(1:n_samps, fmt = num_format), '.fa.gz'))
 }; rm(i)
-
 
