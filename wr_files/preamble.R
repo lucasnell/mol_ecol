@@ -39,10 +39,11 @@ theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 
 
 # Printing only limited information from a dna type object
-print.dna <- function(dna) {
+print.dna <- function(dna, all = FALSE) {
     wid <- options('width')$width
     len <- length(dna)
-    if (len <= 10) {
+    max_print <- ifelse(all, len, 10)
+    if (len <= max_print) {
         print_inds <- 1:len
     } else {
         print_inds <- c(1:5, NA, (len - 4):len)
@@ -57,8 +58,10 @@ print.dna <- function(dna) {
                             .name <- names(.seq)
                             return(paste(c(.width, .seq, .name)))
                         })
-    wid_chars <- max(c(nchar(print_mat[1,]), 5))
-    name_chars <- max(c(nchar(print_mat[3,]), 5))
+    tryCatch(wid_chars <- max(c(nchar(print_mat[1,]), 5)),
+             error = function(e) stop(print_mat))
+    tryCatch(name_chars <- max(c(nchar(print_mat[3,]), 5)),
+             error = function(e) stop(print_mat))
     seq_chars <- min(c(wid - wid_chars - name_chars - 2, max(nchar(print_mat[2,]))))
     half_seq_len1 <- floor((seq_chars - 3) / 2)
     half_seq_len2 <- (seq_chars - 3) - half_seq_len1
@@ -112,39 +115,39 @@ c.dna <- function(..., recursive = FALSE)  {
 
 `[.dna` <- function (x, i)  {
     y <- unclass(x)[i]
-    class(y) <- "dna"
+    y <- .dna(y)
     return (y)
 }
 
 `[<-.dna` <- function(x, i, value) {
     y <- unclass(x)
     y[i] <- value
-    class(y) <- "dna"
+    y <- .dna(y)
     return(y)
 }
 
 
 `[.dna_list` <- function (x, i)  {
     y <- unclass(x)[i]
-    class(y) <- "dna_list"
+    y <- .dna_list(y)
     return (y)
 }
 `[[.dna_list` <- function (x, i)  {
     y <- unclass(x)[[i]]
-    class(y) <- "dna"
+    y <- .dna(y)
     return (y)
 }
 
 `[<-.dna_list` <- function(x, i, value) {
     y <- unclass(x)
     y[[i]] <- value
-    class(y) <- "dna_list"
+    y <- .dna_list(y)
     return(y)
 }
 `[[<-.dna_list` <- function(x, i, value) {
     y <- unclass(x)
     y[[i]] <- value
-    class(y) <- "dna_list"
+    y <- .dna_list(y)
     return(y)
 }
 

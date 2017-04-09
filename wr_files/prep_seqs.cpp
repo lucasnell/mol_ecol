@@ -33,23 +33,55 @@ string rcomp(string seq) {
 
 
 // [[Rcpp::export]]
-CharacterVector all_rm(CharacterVector all_s, int cut_len, string f_bc, string r_bc) {
+CharacterVector prep_s(CharacterVector all_s, int f_len, int r_len, 
+                       string f_bc, string r_bc) {
     std::string f_strand, r_strand, s;
-    int seq_len, vec_len = all_s.length();
+    int frag_len, vec_len = all_s.length();
     CharacterVector out_vec(vec_len * 2);
     for (int i = 0; i < vec_len; i++) {
         s = all_s[i];
-        seq_len = s.size();
-        if (seq_len < cut_len) {
+        frag_len = s.size();
+        if (frag_len >= r_len & frag_len >= f_len) {
+            f_strand = s.substr(0, f_len);
+            r_strand = s.substr(frag_len - r_len, r_len);
+            r_strand = rcomp(r_strand);
+        } else if (frag_len < r_len & frag_len < f_len) {
             f_strand = s;
             r_strand = rcomp(s);
-        } else {
-            f_strand = s.substr(0, cut_len);
-            r_strand = s.substr(seq_len - cut_len, cut_len);
+        } else if (frag_len >= r_len) {
+            f_strand = s;
+            r_strand = s.substr(frag_len - r_len, r_len);
             r_strand = rcomp(r_strand);
+        } else {
+            f_strand = s.substr(0, f_len);
+            r_strand = rcomp(s);
         }
         out_vec[i] = f_bc + f_strand;
         out_vec[vec_len + i] = r_bc + r_strand;
+    }
+    return out_vec;
+}
+
+
+// [[Rcpp::export]]
+CharacterVector prep_p(CharacterVector all_s, int f_len, int r_len, 
+                       string f_bc, string r_bc) {
+    string f_strand, r_strand, s, insert;
+    int frag_len;
+    int insert_len = f_len + r_len; // insert length without barcodes
+    int vec_len = all_s.length();
+    CharacterVector out_vec(vec_len);
+    for (int i = 0; i < vec_len; i++) {
+        s = all_s[i];
+        frag_len = s.size();
+        if (frag_len > insert_len) {
+            f_strand = s.substr(0, f_len);
+            r_strand = s.substr(frag_len - r_len, r_len);
+            insert = f_bc + f_strand + r_strand + r_bc;
+        } else {
+            insert = f_bc + s + r_bc;
+        }
+        out_vec[i] = insert;
     }
     return out_vec;
 }

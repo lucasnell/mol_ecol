@@ -34,7 +34,7 @@ rm(ref_fa); invisible(gc())
 # ==============
 
 set.seed(105)
-filtered_fa <- lapply(digested_fa, function(.dna_ss) size_filter(.dna_ss))
+filtered_fa <- lapply(digested_fa, function(dna_in) size_filter(dna_in))
 Sys.time() - t0
 
 rm(digested_fa); invisible(gc())
@@ -45,7 +45,7 @@ rm(digested_fa); invisible(gc())
 # ==============
 
 set.seed(195)
-variant_fa <- lapply(filtered_fa, function(.dna_ss) make_variants(.dna_ss))
+variant_fa <- lapply(filtered_fa, function(dna_in) make_variants(dna_in))
 Sys.time() - t0
 
 rm(filtered_fa); invisible(gc())
@@ -56,21 +56,12 @@ rm(filtered_fa); invisible(gc())
 # Prep sequences
 # ==============
 
-# Since make_variants returns a list of dna objects for each input dna object
-# (1 for each variant), I now have to use nested lapply calls.
-prepped_fa <- lapply(variant_fa, 
-                     function(.dna_ss_list) {
-                         .dna_list(
-                             lapply(.dna_ss_list, function(.dna_ss) prep_seqs(.dna_ss)))
-                     })
+# (Since make_variants returns a list of dna_lists and prep_seqs uses dna_lists, I'm
+# changing the name of the argument input to prep_seqs.)
+prepped_fa <- lapply(variant_fa, function(dna_in_list) prep_seqs(dna_in_list))
 Sys.time() - t0
 
-
 rm(variant_fa); invisible(gc())
-
-
-
-
 
 
 
@@ -87,10 +78,10 @@ rm(variant_fa); invisible(gc())
 n_samps <- 10
 num_format <- paste0('%0',nchar(n_samps), 'i')
 
+
 for (i in 1:length(prepped_fa)) {
     write_fastas(prepped_fa[[i]], 
-                 file_names = paste0('/Volumes/64gb/fasta/', 
+                 file_names = paste0('~/Desktop/gd/fasta/', 
                                      .wr_env$chosen_enz[i], '_s', 
-                                     sprintf(1:n_samps, fmt = num_format), '.fa.gz'))
+                                     sprintf(1:n_samps, fmt = num_format), '.fa'))
 }; rm(i)
-
