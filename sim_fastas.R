@@ -1,4 +1,8 @@
 
+# Create fasta files of genomic variants, digested by restriction enzymes, filtered by 
+# size, and prepared for sequencing simulation
+
+
 # I first need to source the "working R" files. They will load necessary packages and
 # create functions to do the simulating.
 source('./wr_files/preamble.R')
@@ -65,7 +69,6 @@ Sys.time() - t0
 rm(variant_fa); invisible(gc())
 
 
-
 # ==============
 # Write to new fasta files
 # ==============
@@ -81,9 +84,6 @@ fasta_list <- lapply(1:length(prepped_fa),
                      })
 fasta_names <- paste0('/Volumes/64gb/fasta/', .wr_env$chosen_enz, '.fa.gz')
 write_fastas(fasta_list, file_names = fasta_names)
-
-x <- readFasta('/Volumes/64gb/fasta/ApeKI.fa.gz')
-
 
 
 

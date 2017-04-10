@@ -21,16 +21,13 @@ theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 
 
 # Constructing dna and dna_list objects
-.dna <- function(x, max_len = 10) {
+.dna <- function(x) {
     out_dna <- as.character(x)
     class(out_dna) <- 'dna'
     if (is.null(names(x))) {
         names(out_dna) <- paste0('seq_', 1:length(x))
     } else {
         names(out_dna) <- gsub(' ', '_', names(x))
-        if (any(nchar(names(out_dna)) > max_len)) {
-            names(out_dna) <- substr(names(out_dna), 1, max_len)
-        }
     }
     return(out_dna)
 }
@@ -47,7 +44,7 @@ theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 
 
 # Printing only limited information from a dna type object
-print.dna <- function(dna, print_all = FALSE) {
+print.dna <- function(dna, max_name_len = 20, print_all = FALSE) {
     wid <- options('width')$width
     len <- length(dna)
     max_print <- ifelse(print_all, len, 10)
@@ -63,7 +60,7 @@ print.dna <- function(dna, print_all = FALSE) {
                             }
                             .seq <- dna[i]
                             .width <- nchar(.seq)
-                            .name <- names(.seq)
+                            .name <- substr(names(.seq), 1, max_name_len)
                             return(paste(c(.width, .seq, .name)))
                         })
     wid_chars <- max(c(nchar(print_mat[1,]), 5))
