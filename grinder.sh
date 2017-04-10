@@ -2,11 +2,11 @@
 
 # Runs grinder simulator on fasta file(s)
 
-cd "~/Desktop/gd/fasta"
+cd "/Volumes/64gb/fasta"
 tot_reads=100
 out_name=gr_out
 out_dir=./_grinder_out
-references="_ApeKI_s0102.fa"
+references="ApeKI_s01.fa"
 
 
 
@@ -46,6 +46,16 @@ grinder -rf $references -total_reads $tot_reads -base_name $out_name \
 #         the same format as the read length distribution (a typical value is
 #         2,500 bp for mate pairs) Two distinct reads are generated whether or
 #         not the mate pair overlaps. Default: 0
-
-
+# -af <abundance_file> | -abundance_file <abundance_file>
+#         Specify the relative abundance of the reference sequences manually
+#         in an input file. Each line of the file should contain a sequence
+#         name and its relative abundance (%), e.g. 'seqABC 82.1' or 'seqABC
+#         82.1 10.2' if you are specifying two different libraries.
+# -nl <num_libraries> | -num_libraries <num_libraries>
+#         Number of independent libraries to create. Specify how diverse and
+#         similar they should be with <diversity>, <shared_perc> and
+#         <permuted_perc>. Assign them different MID tags with
+#         <multiplex_mids>. Default: 1
+# -rs <random_seed> | -random_seed <random_seed>
+#         Seed number to use for the pseudo-random number generator.
 

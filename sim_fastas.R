@@ -12,6 +12,7 @@ t0 <- Sys.time()
 # Reference genome fasta file
 ref_fa <- read_fasta('./genome_data/aphid_genome.fa.gz')
 
+
 # ==============
 # Digest
 # ==============
@@ -69,19 +70,20 @@ rm(variant_fa); invisible(gc())
 # Write to new fasta files
 # ==============
 
-# The number of new files will be the number of samples times the number of restriction
-# enzymes used.
-# In my case, it was 30 files.
+# The number of new files will be the number of restriction enzymes used.
+# In my case, it was 3 files.
 # I output these files to a flash drive because I wasn't sure how large they would be.
-# All 30 (gzipped) files totalled 66.7 MB.
+# All 3 (gzipped) files totalled 49.6 MB.
 
-n_samps <- 10
-num_format <- paste0('%0',nchar(n_samps), 'i')
+fasta_list <- lapply(1:length(prepped_fa), 
+                     function(i) {
+                         .dna(c(prepped_fa[[i]], recursive = TRUE))
+                     })
+fasta_names <- paste0('/Volumes/64gb/fasta/', .wr_env$chosen_enz, '.fa.gz')
+write_fastas(fasta_list, file_names = fasta_names)
+
+x <- readFasta('/Volumes/64gb/fasta/ApeKI.fa.gz')
 
 
-for (i in 1:length(prepped_fa)) {
-    write_fastas(prepped_fa[[i]], 
-                 file_names = paste0('~/Desktop/gd/fasta/', 
-                                     .wr_env$chosen_enz[i], '_s', 
-                                     sprintf(1:n_samps, fmt = num_format), '.fa'))
-}; rm(i)
+
+

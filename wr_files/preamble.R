@@ -10,6 +10,7 @@ suppressPackageStartupMessages({
     library(gtools)
     library(parallel)
     library(RcppArmadillo)
+    # library(BH)
 })
 
 # This is to hide certain functions and objects from view
@@ -20,16 +21,23 @@ theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 
 
 # Constructing dna and dna_list objects
-.dna <- function(x) {
+.dna <- function(x, max_len = 10) {
     out_dna <- as.character(x)
     class(out_dna) <- 'dna'
     if (is.null(names(x))) {
         names(out_dna) <- paste0('seq_', 1:length(x))
     } else {
-        names(out_dna) <- names(x)
+        names(out_dna) <- gsub(' ', '_', names(x))
+        if (any(nchar(names(out_dna)) > max_len)) {
+            names(out_dna) <- substr(names(out_dna), 1, max_len)
+        }
     }
     return(out_dna)
 }
+
+
+
+
 .dna_list <- function(in_list) {
     out_list <- in_list
     class(out_list) <- 'dna_list'
@@ -39,10 +47,10 @@ theme_set(theme_classic() %+replace% theme(strip.background = element_blank()))
 
 
 # Printing only limited information from a dna type object
-print.dna <- function(dna, all = FALSE) {
+print.dna <- function(dna, print_all = FALSE) {
     wid <- options('width')$width
     len <- length(dna)
-    max_print <- ifelse(all, len, 10)
+    max_print <- ifelse(print_all, len, 10)
     if (len <= max_print) {
         print_inds <- 1:len
     } else {
@@ -58,10 +66,8 @@ print.dna <- function(dna, all = FALSE) {
                             .name <- names(.seq)
                             return(paste(c(.width, .seq, .name)))
                         })
-    tryCatch(wid_chars <- max(c(nchar(print_mat[1,]), 5)),
-             error = function(e) stop(print_mat))
-    tryCatch(name_chars <- max(c(nchar(print_mat[3,]), 5)),
-             error = function(e) stop(print_mat))
+    wid_chars <- max(c(nchar(print_mat[1,]), 5))
+    name_chars <- max(c(nchar(print_mat[3,]), 5))
     seq_chars <- min(c(wid - wid_chars - name_chars - 2, max(nchar(print_mat[2,]))))
     half_seq_len1 <- floor((seq_chars - 3) / 2)
     half_seq_len2 <- (seq_chars - 3) - half_seq_len1
@@ -156,15 +162,21 @@ c.dna <- function(..., recursive = FALSE)  {
 
 
 
+# This reads a fasta file into a dna object, retaining sequence names
+Sys.setenv("PKG_LIBS" = "-lboost_iostreams")
+sourceCpp('./wr_files/read_fasta.cpp', env = .wr_env)
 
-# This reads a fasta file into a dna object
 read_fasta <- function(file_name) {
-    fasta <- readFasta(file_name)
-    dna_ss <- sread(fasta)
-    dna_in <- .dna(dna_ss)
-    return(dna_in)
+    if (grepl('*.gz$', file_name)) {
+        fasta <- .wr_env$cpp_read_fastagz(file_name)
+    } else {
+        fasta <- .wr_env$cpp_read_fasta(file_name)
+    }
+    seqs <- .Internal(toupper(fasta[,2]))
+    names(seqs) <- fasta[,1]
+    dna_out <- .dna(seqs)
+    return(dna_out)
 }
-
 
 
 
