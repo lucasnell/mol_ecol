@@ -3,18 +3,27 @@
 # Runs grinder simulator on fasta file(s)
 
 cd "/Volumes/64gb/fasta"
-tot_reads=100
+# tot_reads=62500000  # Quarter lane
+tot_reads=2500000  # 1/100 lane
 out_name=gr_out
-out_dir=./_grinder_out
-references="ApeKI_s01.fa"
+out_dir="../fastq/test"
+reference="ApeKI.fa.gz"
+abund=../abundances/ApeKI_one.txt  # Just one library
 
 
-
-# grinder "$references" -total_reads $tot_reads -base_name $out_name \
-grinder -rf $references -total_reads $tot_reads -base_name $out_name \
+echo -e "Start:\n"`date +%H:%M:%S` >> ~/Desktop/grinder_times
+gunzip -c $reference | \
+    grinder -rf - -total_reads $tot_reads -base_name $out_name \
     -output_dir $out_dir \
-    -length_bias 0 -fastq_output 1 -qual_levels 30 10 -insert_dist 200
-    # -length_bias 0 -fastq_output 1 -qual_levels 30 10 -unidirectional 1
+    -length_bias 0 -fastq_output 1 -qual_levels 30 10 -insert_dist 200 \
+    # -abundance_file $abund \
+    -mutation_dist poly4 3e-3 3.3e-8  # (Korbel et al 2009)
+    # -homopolymer_dist "N(n, 0.03494 + n * 0.06856)" \  # (Balzer et al. 2010)
+echo -e "End:\n"`date +%H:%M:%S` >> ~/Desktop/grinder_times
+
+
+
+# -length_bias 0 -fastq_output 1 -qual_levels 30 10 -unidirectional 1
 
 # -length_bias 0  --> Larger fragments contribute the same amount as small ones
 # -fastq_output 1 --> Generate FASTQ output
@@ -38,6 +47,18 @@ grinder -rf $references -total_reads $tot_reads -base_name $out_name \
 #         substitutions for each indel) for Sanger reads. Note that this
 #         parameter has no effect unless you specify the <mutation_dist>
 #         option. Default: 80 20
+# -hd <homopolymer_dist> | -homopolymer_dist <homopolymer_dist>
+#         Introduce sequencing errors in the reads under the form of
+#         homopolymeric stretches (e.g. AAA, CCCCC) using a specified model
+#         where the homopolymer length follows a normal distribution N(mean,
+#         standard deviation) that is function of the homopolymer length n:
+# 
+#           Margulies: N(n, 0.15 * n)              ,  Margulies et al. 2005.
+#           Richter  : N(n, 0.15 * sqrt(n))        ,  Richter et al. 2008.
+#           Balzer   : N(n, 0.03494 + n * 0.06856) ,  Balzer et al. 2010.
+# 
+#         Default: 0
+# 
 # -id <insert_dist>... | -insert_dist <insert_dist>...
 #         Create paired-end or mate-pair reads spanning the given insert
 #         length. Important: the insert is defined in the biological sense,

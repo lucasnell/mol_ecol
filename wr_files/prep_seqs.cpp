@@ -67,7 +67,7 @@ CharacterVector prep_s(CharacterVector all_s, int f_len, int r_len,
 CharacterVector prep_p(CharacterVector all_s, int f_len, int r_len, 
                        string f_bc, string r_bc) {
     string f_strand, r_strand, s, insert;
-    int frag_len;
+    int frag_len, short_by;
     int insert_len = f_len + r_len; // insert length without barcodes
     int vec_len = all_s.length();
     CharacterVector out_vec(vec_len);
@@ -78,6 +78,9 @@ CharacterVector prep_p(CharacterVector all_s, int f_len, int r_len,
             f_strand = s.substr(0, f_len);
             r_strand = s.substr(frag_len - r_len, r_len);
             insert = f_bc + f_strand + r_strand + r_bc;
+        } else if (frag_len < r_len || frag_len < f_len) {
+            short_by = max(r_len - frag_len, f_len - frag_len);
+            insert = f_bc + s + string(short_by, 'N') + s + r_bc;
         } else {
             insert = f_bc + s + r_bc;
         }

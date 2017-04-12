@@ -2,6 +2,8 @@
 
 source('./wr_files/preamble.R')
 
+library(readr)
+
 rounded_p <- function(vec, round_digits = 4) {
     new_vec <- round(vec / sum(vec), round_digits)
     # If the rounded numbers don't sum to 1, then add the difference to the 
@@ -11,6 +13,9 @@ rounded_p <- function(vec, round_digits = 4) {
         newish_vec <- vec / sum(vec)
         diffs <- (newish_vec - new_vec) * 10^round_digits
         ind <- which(diffs == ifelse(sum(new_vec) < 1, min(diffs), max(diffs)))
+        if (length(inds) > 1) {
+            inds <- sample(inds, 1)
+        }
         new_vec[ind] <- new_vec[ind] + (1 - sum(new_vec))
     }
     return(new_vec)
@@ -18,15 +23,19 @@ rounded_p <- function(vec, round_digits = 4) {
 
 enz <- c('ApeKI', 'BstBI', 'BspEI')
 n_samps <- 10
-# Four scenarios:
-scen_mat <- matrix(0, n_samps, 4)
-scen_mat[,1] <- rep(0.1, 10)
-scen_mat[,2] <- 1:10 %>% rounded_p
-set.seed(656); scen_mat[,3] <- rlnorm(10) %>%  # <- More realistic given exp in growth terms
+# Four scenarios of pooled data:
+pool_scens <- matrix(0, n_samps, 4)
+pool_scens[,1] <- rep(0.1, 10)
+pool_scens[,2] <- 1:10 %>% rounded_p
+set.seed(656); pool_scens[,3] <- rlnorm(10) %>%  # <- More realistic given exp in growth terms
     rounded_p
-scen_mat[,4] <- c(0.5, 0.25, 0.25, rep(0, 7))
+pool_scens[,4] <- c(0.5, 0.25, 0.25, rep(0, 7))
 # Turning to percents:
-scen_mat <- scen_mat * 100
+pool_scens <- pool_scens * 100
+# 10 scenarios of individual data: 1 per sample
+indiv_scens <- matrix(0, n_samps, n_samps)
+diag(indiv_scens) <- 1
+
 
 seq_names <- lapply(enz, 
                     function(e) {
@@ -35,27 +44,35 @@ seq_names <- lapply(enz,
                     })
 
 
-lapply(1:length(enz), 
-       function(i) {
-           
-           .names <- seq_names[[i]]
-           n_seqs_ps <- length(.names) / n_samps
-           
-           abund_mat <- lapply(1:ncol(scen_mat), 
-                               function(i) rep(scen_mat[,i] / n_seqs_ps, 
-                                               each = n_seqs_ps)) %>% 
-               do.call(what = cbind, args = .)
-           
-           out_df <- as_data_frame(abund_mat) %>% 
-               mutate_all(funs(format), scientific = FALSE) %>% 
-               mutate(name = .names) %>% 
-               select(name, everything())
-           fn <- paste0('/Volumes/64gb/abundances/', enz[i], '.txt')
-           write.table(out_df, fn, quote = FALSE, sep = ' ', row.names = FALSE, 
-                       col.names = FALSE)
-           
-           return(invisible(NULL))
-           
-       })
+# lapply(1:length(enz), 
+#        function(i) {
+
+.names <- seq_names[[i]]
+n_seqs_ps <- length(.names) / n_samps
+
+pool_abunds <- lapply(1:ncol(pool_scens), 
+                      function(i) rep(pool_scens[,i] / n_seqs_ps, 
+                                      each = n_seqs_ps)) %>% 
+    do.call(what = cbind, args = .)
+indiv_abunds <- lapply(1:ncol(indiv_scens), 
+                      function(i) rep(pool_scens[,i] / n_seqs_ps, 
+                                      each = n_seqs_ps)) %>% 
+    do.call(what = cbind, args = .)
+
+pool_df <- as_data_frame(pool_abunds) %>% 
+    mutate_all(funs(format), scientific = FALSE) %>% 
+    mutate(name = .names) %>% 
+    select(name, everything())
+
+fn <- paste0('/Volumes/64gb/abundances/', enz[i], '.txt')
+
+
+#     write_delim(out_df, fn, col_names = FALSE)
+#     
+#     return(invisible(NULL))
+#     
+# })
+
+rm(i, .names, n_seqs_ps, abund_mat, out_df, fn)
 
 
