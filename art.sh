@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+
 
 # Runs ART simulator on fasta file(s)
 
@@ -15,25 +15,30 @@ reference="ApeKI.fa"
 # -rs sets random number generator
 
 
-# echo -e "Start:\n"`date +%H:%M:%S`"\n" > ~/Desktop/art_times
+
 art_illumina -i $reference -l 100 -c $rcount -m 200 -s 0 -p -o ${out_name} \
     -1 $prof -2 $prof -na \
     -ir2 0.00009 -dr2 0.00011 -nf 0 \
     -rs 1492027404
-# echo -e "End:\n"`date +%H:%M:%S` >> ~/Desktop/art_times
+# The above took 1 hr, 15 min
 
+
+# This takes a while, too
 cd ${out_name/art_out/}
 for f in *.fq
 do
     gzip $f
 done
 
-# Start:
-# 15:03:24
-# 
-# End:
-# 16:17:53
 
+
+# ==========================================
+# ==========================================
+
+# Some of ART's arguments
+
+# ==========================================
+# ==========================================
 
 
 
