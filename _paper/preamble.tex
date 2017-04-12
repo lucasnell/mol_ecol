@@ -4,6 +4,13 @@
 
 \usepackage[letterpaper, margin=1in]{geometry}
 % \usepackage[utf8]{inputenc}
+
+
+% ---------
+% Fonts
+% ---------
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
 \usepackage{amsmath}
 
 
@@ -30,6 +37,19 @@
 ]{caption}
 
 
+% ---------
+% Section titles
+% ---------
+
+\usepackage{titlesec}
+% Form of the following commands:
+% \titlespacing*{<command>}{<left>}{<before-sep>}{<after-sep>}
+\titlespacing*{\section}{0pt}{0ex}{2ex}
+\titlespacing*{\subsection}{0pt}{0ex}{0ex}
+\titlespacing*{\subsubsection}{0pt}{0ex}{0ex}
+\renewcommand{\thesection}{}
+\renewcommand{\thesubsection}{}
+
 
 % ---------
 % Bibliography and in-text citations
@@ -38,11 +58,30 @@
     backend=biber,
     maxcitenames=2,
     style=authoryear,
-    % givenits=true,
+    giveninits=true,
     maxbibnames=99,
-    maxcitenames=2
+    maxcitenames=2,
+    natbib
 ]{biblatex}
 \addbibresource{~/Dropbox/refs.bib}
-
+% Removing quotes from article titles
+\DeclareFieldFormat[article]{citetitle}{#1}
+\DeclareFieldFormat[article]{title}{#1}
+% Removing "In: " from journal names
+\renewbibmacro{in:}{}
+% Make last names go first (2nd line is for fullcite entries)
+\DeclareNameAlias{sortname}{last-first}
+\DeclareNameAlias{default}{last-first}
+% No prefix for the `pages` field in the bibliography
+\DeclareFieldFormat{pages}{#1}
+% Make volume and issue look okay
+\renewbibmacro*{volume+number+eid}{%
+    \printfield{volume}%
+    \setunit*{\addnbthinspace}% NEW (optional); there's also
+    \printfield{number}%
+    \setunit{\addcomma\space}%
+    \printfield{eid}
+}
+\DeclareFieldFormat[article]{number}{\mkbibparens{#1}}
 
 
