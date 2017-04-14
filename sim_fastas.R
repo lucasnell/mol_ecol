@@ -84,7 +84,7 @@ fasta_list <- lapply(1:length(prepped_fa),
                      function(i) {
                          .dna(c(prepped_fa[[i]], recursive = TRUE))
                      })
-fasta_names <- paste0('/Volumes/64gb/fasta/', .wr_env$chosen_enz, '.fa')
+fasta_names <- paste0('/Volumes/750gb/fasta/', .wr_env$chosen_enz, '.fa')
 write_fastas(fasta_list, file_names = fasta_names)
 
 

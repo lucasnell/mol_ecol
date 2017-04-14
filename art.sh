@@ -2,9 +2,9 @@
 
 # Runs ART simulator on fasta file(s)
 
-cd "/Volumes/64gb/fasta"
+cd "/Volumes/750gb/fasta"
 rcount=100
-out_name=../fastq/art_test/art_out
+out_name=../fastq/apeki
 prof=../art_profile/HiSeq2kL100R1.txt
 reference="ApeKI.fa"
 
@@ -24,10 +24,10 @@ art_illumina -i $reference -l 100 -c $rcount -m 200 -s 0 -p -o ${out_name} \
 
 
 # This takes a while, too
-cd ${out_name/art_out/}
+cd ../fastq
 for f in *.fq
 do
-    gzip $f
+    cat $f | gzip - >> apeki.fq.gz
 done
 
 
