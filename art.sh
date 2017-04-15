@@ -23,12 +23,33 @@ art_illumina -i $reference -l 100 -c $rcount -m 200 -s 0 -p -o ${out_name} \
 # The above took 1 hr, 15 min
 
 
-# This takes a while, too
 cd ../fastq
-for f in *.fq
+name=apeki
+# I used `cat ${name}.fq | wc -l` to get this, but it takes a while, so I pasted the 
+# output here:
+total_lines=849400000
+# The file is split into R1, then R2 reads, so for each sample I have to take from first
+# half of file, then second
+halfway=$((total_lines / 2))
+lines_per=$((halfway / 10))
+
+# This takes ~14 minutes per iteration
+echo -e "Started at\t" $(date +%H:%M:%S)
+for i in {1..10}
 do
-    cat $f | gzip - >> apeki.fq.gz
+    j=$(((i-1) * lines_per + 1))
+    k=$((i * lines_per))
+    j2=$((j + halfway))
+    k2=$((k + halfway))
+    # R1 reads
+    sed -n "${j},${k}p" ${name}.fq > ${name}_${i}.fq
+    # R2 reads
+    sed -n "${j2},${k2}p" ${name}.fq >> ${name}_${i}.fq
+    echo -e "$i done at\t" $(date +%H:%M:%S)
 done
+
+
+
 
 
 

@@ -11,7 +11,9 @@
 % ---------
 \usepackage{fontspec}
 \setmainfont{Times New Roman}
-\usepackage{amsmath}
+\usepackage{unicode-math}
+\setmathfont{XITS Math}
+% \usepackage{amsmath}
 
 
 % ---------
@@ -83,5 +85,6 @@
     \printfield{eid}
 }
 \DeclareFieldFormat[article]{number}{\mkbibparens{#1}}
+\renewcommand*{\bibfont}{\small}
 
 
