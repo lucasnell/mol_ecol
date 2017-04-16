@@ -58,7 +58,7 @@ done
 # samtools index ${name}_hi.bam
 
 
-bams=""
+bams="${name}_hi.bam"
 for i in {1..10}
 do
     bams+=" ${name}_${i}_hi.bam"
@@ -67,7 +67,7 @@ done
 # Now making mpileup file to input to popoolation2 (took 30 min for 100x coverage)
 samtools mpileup -f ../ref/aphid_genome.fa \
     -d 10000 \
-    -B ${bams} > ${name}.mpileup
+    -B ${bams} > ../allele_freq/${name}.mpileup
     # -B ${name}_hi.bam > ${name}_small.mpileup
     # -r GL349621.1:17500 \
 
@@ -80,16 +80,16 @@ samtools mpileup -f ../ref/aphid_genome.fa \
 #       filtering for base quality."
 
 # 
-echo -e "mpileup2sync.jar started\t" $(date +%H:%M:%S) >> ~/Desktop/times.fa
-java -ea -Xmx4g -jar ../popoolation2/mpileup2sync.jar --input ${name}.mpileup \
-    --output ${name}_lo.sync --fastq-type illumina --min-qual 0 --threads ${cores}
-echo -e "mpileup2sync.jar ended\t\t" $(date +%H:%M:%S) >> ~/Desktop/times.fa
+# echo -e "mpileup2sync.jar started\t" $(date +%H:%M:%S) >> ~/Desktop/times.fa
+# java -ea -Xmx4g -jar ../popoolation2/mpileup2sync.jar --input ${name}.mpileup \
+#     --output ${name}_lo.sync --fastq-type illumina --min-qual 0 --threads ${cores}
+# echo -e "mpileup2sync.jar ended\t\t" $(date +%H:%M:%S) >> ~/Desktop/times.fa
 
 
 # Takes ~3 hrs
-echo -e "mpileup2sync.pl started\t" $(date +%H:%M:%S) >> ~/Desktop/times.fa
+echo -e "mpileup2sync.pl started\t\t" $(date +%H:%M:%S) >> ~/Desktop/times.fa
 perl ../popoolation2/mpileup2sync.pl --input ${name}.mpileup \
-    --output ${name}_lo.sync --fastq-type illumina --min-qual 1
+    --output ${name}.sync --fastq-type illumina --min-qual 1
 echo -e "mpileup2sync.pl ended\t\t" $(date +%H:%M:%S) >> ~/Desktop/times.fa
 
 
