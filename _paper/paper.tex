@@ -1,7 +1,7 @@
-                          
+
 \iffalse
 cd ./_paper
-xelatex paper && biber paper && xelatex paper
+xelatex paper && biber paper && xelatex paper && xelatex paper
 rm *.log *.bcf *.aux *.bbl *.blg *.run.xml
 \fi
 
@@ -9,8 +9,7 @@ rm *.log *.bcf *.aux *.bbl *.blg *.run.xml
 
 
 
-\title{\vspace*{-3ex}Determining outcomes of experiments evolving large populations of
-asexual eukaryotes}
+\title{\vspace*{-3ex}Measuring aphid clonal line abundance after experimental evolution}
 \author{Lucas Nell}
 \date{\vspace*{-3ex}\emph{Spring 2017}}
 
@@ -21,65 +20,16 @@ asexual eukaryotes}
 
 \raggedright
 
-\section{Introduction}
 
-
-Experimental evolution studies have been instrumental in informing our understanding
-of the processes shaping evolution \citep{Elena:2003fr}. 
-Most of such studies have been carried out in microbes
-\citep[reviewed in][]{Dettman:2012gt,Jerison:2015kw}, and have provided insights on
-such diverse and fundamental themes as historical contigency, evolutionary innovation,
-parallel evolution, and adaptation
-\citep{Blount:2008fo,Barrick:2009in,TollRiera:2016fd,Voordeckers:2015cl,Gerstein:2012ki}.
-
-
-Similar experiments have been carried out in invertebrates
-\citep{Gompert:2016eg,Chandler:2014bn,Burke:2010eq,Kang:2016ea,Rouchet:2014jl}, 
-although such studies are comparatively rare.
-Experimental evolution studies in insects typically utilize limited numbers of 
-clonal or inbred lines \citep[e.g.,][]{Rouchet:2014jl,Kang:2016ea} and 
-characterize experimental populations by either 
-(a) measuring the distribution of specific phenotypes \citep[e.g.,][]{Rouchet:2014jl}
-or
-(b) sequencing pooled DNA \citep[``Pool-seq''; e.g.,][]{Burke:2010eq}.
-The former requires that the researcher manipulate the environment such that a 
-specific phenotype is predicted to change.
-Moreover, if starting experimental populations have a continuous distribution of
-phenotypes or if any significant degree of phenotypic plasticity exists, this method
-is not likely to provide accurate estimates of how distributions of individuals change
-through time.
-
-Pool-seq, however, is an accurate, cost-effective method to measure allele frequencies
-in populations \citep{Gautier:2013dv,Futschik:2010be}
-and to identify loci associated with traits \citep{Rubin:2010es,Bastide:2013jx}.
-However, Pool-seq's advantagous accuracy-to-cost ratio is only present when there
-are many pooled individuals ($>40$) and when depth of coverage is high ($> \times 50$).
-Because sequencing error is difficult to distinguish from rare alleles, 
-Pool-seq is not ideal when trying to detect these low-frequency alleles
-\citep{Schlotterer:2014dk}.
-Additionally, Pool-seq of whole-genome sequencing provides much unnecessary 
-information if an association study is not the ultimate goal.
-
-One way to reduce genome complexity is to use restriction site-associated DNA 
-sequencing (``RADseq'').
-(Note that here I use the more inclusive definition of RADseq by
-\citet{Andrews:2016bc}, who define RADseq as all methods 
-``... that rely on restriction enzymes to determine the set of loci to be sequenced''
-\citep[p 81]{Andrews:2016bc}.)
-RADseq approaches use restriction enzymes to break apart the genome at specific 
-locations that are shared between intraindividual genomes.
-
-Genotyping-by-sequencing (``GBS'') is a particularly methods-light 
-\citep{Elshire:2011gn}
-
-
-Herein I will discuss Pool-seq as a way to assess the abundance of clonal lines of
-aphids after experimental evolution.
+\input{intro}
 
 
 
 
 
+
+
+\input{results}
 
 
 \iffalse

@@ -29,7 +29,7 @@
 % ---------
 \usepackage{graphicx,setspace}
 % Figures are another directory:
-\graphicspath{{~/Google_Drive/Wisconsin/_Mol_Ecol/_paper/}}
+\graphicspath{{./figs/}}
 \usepackage[
     justification=raggedright,
     margin=1in,
@@ -61,6 +61,7 @@
     maxcitenames=2,
     style=authoryear,
     giveninits=true,
+    uniquename=init,
     maxbibnames=99,
     maxcitenames=2,
     natbib
@@ -86,5 +87,18 @@
 }
 \DeclareFieldFormat[article]{number}{\mkbibparens{#1}}
 \renewcommand*{\bibfont}{\small}
+
+
+% ---------
+% Links
+% ---------
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=blue,      
+    urlcolor=blue,
+}
+\urlstyle{same}
 
 
