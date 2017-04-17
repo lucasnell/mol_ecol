@@ -25,5 +25,5 @@ sampling_p <- samp_df %>%
     ylab('Density') +
     theme(legend.position = c(0.1, 0.8))
 sampling_p
-ggsave('./_paper/figs/sampling_p.pdf', sampling_p, width = 6, height = 4)
+ggsave('./_paper/figs/sampling_p.pdf', sampling_p, width = 6, height = 3)
 
