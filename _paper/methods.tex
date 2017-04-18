@@ -40,7 +40,7 @@ where $K$ is the proportion of segregating sites. Variable $a_n$ is below:
 
 where $n$ is the number of individuals sampled.
 Thus the the proportion of segregating sites is simply $K = \theta_w a_n$.
-For 10 samples, $K = 0.01414$.
+For 10 samples and $\theta_w = 0.0050$, $K = 0.01414$.
 
 Next, I will estimate the nucleotide diversity at segregating sites.
 $\theta_{\pi}$ is calculated using the following equation \citep{Nei:1979hm}:
@@ -53,7 +53,7 @@ Here, $x_i$ and $x_j$ represent the frequencies of the $i$\textsuperscript{th} a
 $j$\textsuperscript{th} unique sequences respectively and $\pi_{ij}$ represents the
 proportion of divergent sequence between the $i$\textsuperscript{th} and 
 $j$\textsuperscript{th} unique sequences.
-If I assume that all lines will be unique sequences—a safe assumption if whole
+If I assume that all $n$ lines will be unique sequences—a safe assumption if whole
 genomes are considered—then the above equation can be expressed as follows:
 
 \begin{equation} \label{eq:unqseq}
@@ -90,7 +90,8 @@ Solving for $\bar{\pi}$ yields the following:
 \end{equation}
 
 
-Since I have already calculated the proportion of segregated sites, I want the mean
+Since I have already calculated the proportion of segregated sites, only considering
+segregating sites will make my simulations more simple. Thus I will calculate the mean
 divergence at segregated sites only.
 To only consider segregated sites, I divide the whole expression by the proportion 
 of segregated sites.
@@ -101,8 +102,8 @@ at segregating sites, $\bar{\pi}_{s}$:
     \bar{\pi}_{s} = \frac{\theta_\pi n^2}{K {n \choose 2}}
 \end{equation}
 
-For the estimates above, $\bar{\pi}_s = 0.7072$. At each segregating (i.e., SNP) site,
-I inserted random nucleotide frequencies that matched closest to this pairwise
+Using the estimates above, $\bar{\pi}_s = 0.7072$. At each segregating (i.e., SNP) site,
+I inserted random nucleotide frequencies that matched closest to this average pairwise
 difference.
 
 \subsection{Preparing sequences}
@@ -118,7 +119,8 @@ I used the ART sequencing simulator \citep{Huang:2012kq} to simulate single-end,
 Illumina reads.
 Because I only wanted fragments to be sequenced from the ends (i.e., no further 
 digestion), I simulated paired-end reads with the mean size of DNA fragments set to
-200bp (100bp from each end) with a standard deviation of zero.
+200bp (100bp from each end, the maximum size output from the ``Preparing sequences''
+step) with a standard deviation of zero.
 I also forced R2 reads to have the same error and mapping quality profile as R1.
 
 I simulated $100\times$ coverage for all samples across the entire genome.

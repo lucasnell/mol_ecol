@@ -9,6 +9,9 @@ Author: Lucas Nell
 
 ## File and folder notes
 
+__The folder `_paper`__ contains files (mostly LaTeX) used to create the final 
+paper document.
+
 __The folder `dv_files`__ contains files explaining how all steps were developed.
 For a given step, the `.md` or `.pdf` file is the one you should examine to understand
 the code's overall rationale, and the `.R` file includes all the raw R code, which is 

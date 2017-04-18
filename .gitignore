@@ -11,7 +11,7 @@ genome_data
 *.run.xml
 *.synctex.gz
 *.RData
-_paper/paper.pdf
+_paper/figs
 _paper/*.log
 _paper/*.bcf
 _paper/*.aux

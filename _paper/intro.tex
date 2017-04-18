@@ -23,7 +23,7 @@ or
 (b) sequencing pooled DNA \citep[``Pool-seq''; e.g.,][]{Burke:2010eq}.
 The former requires that the researcher manipulate the environment such that a 
 specific phenotype is predicted to change.
-Moreover, if starting experimental populations have a continuous distribution of
+Moreover, if initial experimental populations have a continuous distribution of
 phenotypes or if any significant degree of phenotypic plasticity exists, this method
 is not likely to provide accurate estimates of how distributions of individuals change
 through time.
@@ -53,7 +53,7 @@ appropriate, such as 2bRAD or ezRAD when many cut sites are required or double-d
 (ddRAD) when sampling complex genomes or needing extreme flexibility 
 \citep{Andrews:2016bc}.
 Genotyping-by-sequencing (``GBS'') does not usually provide as many cut sites as some 
-other methods, but it is a particularly low-effort, low-cost RADseq approach
+other methods, but it is a particularly low-effort, low-cost RADseq methodology
 that requires no specialized equipment for sample preparation \citep{Elshire:2011gn}.
 I have decided on GBS going forward, and below I will outline why its aforementioned
 attributes are particularly suitable for my experiment.
@@ -62,16 +62,18 @@ The purpose of this paper is to assess pooled GBS as a method to estimate the ab
 of clonal lines of aphids after experimental evolution.
 In the proposed experiment, I seek to measure the repeatability of evolution by 
 starting replicate cages (2m $\times$ 1m $\times$ 1m) with 50 each of the same 10 aphid
-clones, allowing aphids to compete in cages for ~6 months, then determining the relative
-abundances of the starting clonal lines at the end of the experiment.
+clones, allowing aphids to compete in cages for $\sim$6 months, then determining the
+relative abundances of the starting clonal lines at the end of the experiment.
+Clonal lines will also be genotyped individually to allow us to distinguish between 
+them in pooled samples.
 Aspects of this specific experiment that make it suitable for pooled GBS are as follows:
 
 \textbf{Pooling:}
 Each experimental population will contain $\gg$1,000 individuals when allele frequencies 
 are sought at the end of the experiment. Individual-based estimates (e.g., using 
-microsatellites) would require ~50--100  individuals to be sampled from the population 
-(Figure \ref{fig:sampling}), which would take huge amounts of preparation time. Pool-seq 
-would allow me to only prepare a single or a few samples per  experimental 
+microsatellites) would require $\sim$50--100  individuals to be sampled from the 
+population (Figure \ref{fig:sampling}), which would take huge amounts of preparation time.
+Pool-seq would allow me to only prepare a single or a few samples per  experimental 
 replicate, and, given adequate coverage, should provide accurate allele frequencies 
 \citep{Schlotterer:2014dk}.
 
@@ -98,9 +100,9 @@ should serve my purposes adequately.
 
 
 
-
-The accuracy of pooled GBS to estimate allele frequencies from populations of known
-genotypes has never been examined, to this author's knowledge.
+Individually, Pool-seq and GBS would likely allow us to estimate aphid abundances, but
+the accuracy of combining Pool-seq with GBS to estimate allele frequencies from 
+populations of known genotypes has never been examined (to this author's knowledge).
 I will measure accuracy using simulations of pooled GBS from variants derived from the 
 aphid reference genome.
 
