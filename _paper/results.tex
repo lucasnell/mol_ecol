@@ -1,4 +1,22 @@
 
+\section{Results}
+
+There were a total of 212,350,000 reads simulated by the ART simulator.
+These reads, when aligned to the aphid genome, covered 9,795,971 unique positions.
+The distribution of read depths had a small peak at very low depths, with a very large
+peak at slightly less than 1,000$\times$, and another, smaller peak at ~1,750$\times$
+(Figure \ref{fig:depth}).
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=6in]{dep_p.pdf}
+    \caption{Histogram of read depths for simulated reads aligned to the aphid reference
+        genome.}
+    \label{fig:depth}
+\end{figure}
+
+There were 151,572 locations containing SNPs. Using these locations to estimate 
+abundances resulted in estimates very near actual values (Figure \ref{fig:proportions}).
 
 \begin{figure}[!ht]
     \centering
@@ -8,3 +26,4 @@
              all samples.}
     \label{fig:proportions}
 \end{figure}
+

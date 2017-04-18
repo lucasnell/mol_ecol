@@ -1,8 +1,8 @@
 
 \iffalse
 cd ./_paper
-xelatex paper && biber paper && xelatex paper && xelatex paper
-rm -f *.log *.bcf *.aux *.bbl *.blg *.run.xml *.out
+xelatex paper && biber paper && xelatex paper && xelatex paper && \
+    rm -f *.log *.bcf *.aux *.bbl *.blg *.run.xml *.out
 \fi
 
 \input{preamble}
@@ -23,16 +23,13 @@ rm -f *.log *.bcf *.aux *.bbl *.blg *.run.xml *.out
 
 \input{intro}
 
-
-
-
 \input{methods}
 
+\input{results}
 
-% \input{results}
+\input{discussion}
 
-
-\clearpage
+% \clearpage
 \printbibliography
 
 \end{document}

@@ -1,0 +1,28 @@
+
+\section{Discussion}
+
+Simulated pooled GBS data resulted in abundance estimates nearly identical to correct
+values.
+However, multiple sources of error were not simulated here, and would need to be if
+a proper test of this method is to be made.
+First, I simply filtered the pooled DNA \texttt{fastq} file to get reads for the 
+individual sample reads. This means that the same sequencing error that occurred in 
+the pooled reads occurred in the samples' reads, which is unrealistic.
+Second, I created variants after digesting the genome, so mutations occurring in 
+restriction enzyme binding sites, a common problem for RADseq data \citep{Andrews:2016bc},
+was not introduced into my simulations.
+Third, PCR bias was partially replicated when I filtered by fragment size, but
+I did not simulate an actual PCR process. Other biases may be introduced if a full PCR
+process is implemented.
+Fourth, I only introduced SNPs into genomic variants, but more complex genomic 
+changes (e.g., indels, inversions) may necessitate more complex analyses.
+Fifth, no individuals were heterozygous in my simulations.
+
+If pooled GBS remains reasonably accurate with these additional sources of error, there
+are other tests that I need to run to optimize how I use this method.
+All samples were evenly distributed in the pooled DNA, but this will not likely be
+the case in reality. Assessing how rare clonal lines are detected using this approach 
+will be a key goal going forward.
+Read depth will be particularly important for determining rare allele frequencies, but
+it might also have overall effects on allele frequency estimates.
+This should also be assessed.

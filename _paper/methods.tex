@@ -136,7 +136,19 @@ samtools, resulting in a single \texttt{mpileup} file.
 That file was input to Popoolation2 \citep{Kofler:2011ds}, which creates a much more 
 concise summary of the output, a \texttt{sync} file.
 
+
 Figure \ref{fig:methods_overview} contains an overview of this simulation process.
+
+
+\subsection{Abundance calculation}
+
+From the sync file, I estimated how many alleles a sample could have contributed to
+the pooled sample at a given location (from 0 to 2) based on what nucleotides
+were present in the pooled and sample's alignment at that location.
+I then summed these counts for each sample to create their total allele counts.
+Abundances were each sample's allele counts divided by the total allele counts for all
+samples.
+
 
 
 \begin{figure}[!ht]
@@ -152,3 +164,4 @@ Figure \ref{fig:methods_overview} contains an overview of this simulation proces
     \label{fig:methods_overview}
 \end{figure}
 
+\clearpage

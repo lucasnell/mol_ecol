@@ -63,6 +63,20 @@ parse_sync <- function(fn, n_samps = 10, filter_same = TRUE) {
 
 
 
+# # Figure of read depths (commented bc it takes ~5-6 minutes)
+# system.time(sync <- parse_sync('/Volumes/750gb/allele_freq/apeki.sync', 10, FALSE))
+# 
+# ss <- sync %>% 
+#     filter(samp == 's_01')
+# dep_plot <- ss %>% 
+#     ggplot(aes(dep, ..density..)) +
+#     geom_histogram(bins = 100, fill = 'dodgerblue') +
+#     xlab('Read depth') +
+#     ylab('Density')
+# 
+# ggsave('./_paper/figs/dep_p.pdf', dep_plot, width = 6, height = 2.5)
+
+
 
 # # Takes ~5-6 minutes
 # system.time(sync <- parse_sync('/Volumes/750gb/allele_freq/apeki.sync'))
@@ -72,6 +86,8 @@ load('sync.RData')
 
 sync <- sync %>%
     mutate_if(is.character, factor)
+
+sync %>% filter(samp == 's_01')
 
 sync %>% 
     group_by(samp) %>% 
@@ -91,7 +107,7 @@ prop_p <- sync %>%
     ylab('Estimated proportion') +
     xlab('Sample')
 prop_p
-ggsave('./_paper/figs/prop_p.pdf', prop_p, width = 6, height = 4)
+ggsave('./_paper/figs/prop_p.pdf', prop_p, width = 6, height = 3)
 
 
 
