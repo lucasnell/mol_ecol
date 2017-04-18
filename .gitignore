@@ -12,3 +12,9 @@ genome_data
 *.synctex.gz
 *.RData
 _paper/paper.pdf
+_paper/*.log
+_paper/*.bcf
+_paper/*.aux
+_paper/*.bbl
+_paper/*.blg
+_paper/*.run.xml

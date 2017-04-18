@@ -2,7 +2,7 @@
 \iffalse
 cd ./_paper
 xelatex paper && biber paper && xelatex paper && xelatex paper
-rm *.log *.bcf *.aux *.bbl *.blg *.run.xml
+rm -f *.log *.bcf *.aux *.bbl *.blg *.run.xml *.out
 \fi
 
 \input{preamble}
@@ -26,138 +26,11 @@ rm *.log *.bcf *.aux *.bbl *.blg *.run.xml
 
 
 
+\input{methods}
 
 
+% \input{results}
 
-\input{results}
-
-
-\iffalse
-% PoPoolation2
-\cite{Kofler:2011ds}
-
-% Evolution experiments with microorganisms: the dynamics and genetic bases of adaptation
-\citep{Elena:2003fr}
-
-% Combining experimental evolution with next-generation sequencing: a powerful tool to study adaptation from standing genetic variation
-\citep{Schlotterer:2014jza}
-
-% Evolutionary insight from whole-genome sequencing of experimentally evolved microbes
-\citep{Dettman:2012gt}
-
-
-
-
-% Genomic investigations of evolutionary dynamics and epistasis in microbial evolution experiments
-\citep{Jerison:2015kw}
-
-
-
-% Historical contingency and the evolution of a key innovation in an experimental population of Escherichia coli
-\citep{Blount:2008fo}
-% Genome evolution and adaptation in a long-term experiment with Escherichia coli
-\citep{Barrick:2009in}
-
-
-
-% The Genomic Basis of Evolutionary Innovation in Pseudomonas aeruginosa
-\citep{TollRiera:2016fd}
-
-% Experimental evolution of the model eukaryote Saccharomyces cerevisiae yields insight into the molecular mechanisms underlying adaptation
-\citep{Voordeckers:2015cl}
-
-% Parallel genetic changes and nonparallel gene–environment interactions characterize the evolution of drug resistance in yeast
-\citep{Gerstein:2012ki}
-
-
-
-% Seed beetle experimental evolution
-\citep{Gompert:2016eg}
-
-% Parallel genome-wide fixation of ancestral alleles in partially outcrossing experimental populations of Caenorhabditis elegans
-\citep{Chandler:2014bn}
-
-% Genome-wide analysis of a long-term evolution experiment with Drosophila
-\citep{Burke:2010eq}
-
-
-% From "Rapid genomic changes in Drosophila melanogaster adapting to desiccation stress in an experimental evolution system":
-% Experimental evolution uses well-defined selection protocols to force phenotypic divergence, which combined with genome-wide scans (‘evolve-and-resequence’) may narrow down the candidate target regions under positive selection [26–30]. Experimental evolution provides a unique advantage compared to other evolutionary approaches: the ability to replicate an experiment under identical conditions, and thus to distinguish between stochastic and deterministic effects. This replication provides immediate clues about genetic parallelism that can be used to separate soft sweeps from hard sweeps, since sweep signatures parallel between replicates under the same selection pressure, either due to shared standing genetic variation or recurrent mutations, will by definition rule out hard sweeps (although replicate-specific sweep signatures will not automatically preclude soft sweeps). Parallel genetic changes have been observed in experimental evolution experiments with Escherichia coli [31–34], yeast [35], Caenorhabditis elegans [36], and Drosophila melanogaster [26]. While genetic parallelism in the first two systems was due to recurrent mutations, standing genetic variation shared between experimental replicates is the most likely explanation for evolutionary convergence in such organisms as Drosophila.
-\citep{Kang:2016ea}
-
-
-
-
-
-
-% RADseq review
-\citep{Andrews:2016bc}
-
-
-
-\fi
-
-
-
-% \section{Testing}
-% 
-% The measure of nucleotide diversity from \citet{Nei:1979hm}, $\theta_{\pi}$, is 
-% calculated using
-% the following equation:
-% 
-% \begin{equation} \label{eq_neili}
-%     \theta_\pi = \sum_{ij} x_i x_j \pi_{ij}
-% \end{equation}
-% 
-% Here, $x_i$ and $x_j$ represent the frequencies of the $i$th and $j$th unique 
-% sequences respectively and 
-% $\pi_{ij}$ represents the proportion of divergent sequence between the $i$th and 
-% $j$th unique sequences.
-% 
-% If I assume that all lines will be unique sequences—a safe assumption if whole 
-% genomes are considered—then the above equation can be expressed as follows:
-% 
-% \begin{equation} \label{eq_unqseq}
-%     \theta_\pi = \frac{1}{n^2} \sum_{ij} \pi_{ij}
-% \end{equation}
-% 
-% Then, since the number of total pairwise combinations between $n$ sequences is 
-% $\binom{n}{2}$, we can calculate $\bar{\pi}$, the mean proportional
-% sequence divergence between any two sequences, as such:
-% 
-% % \begin{equation} \label{eq_barpi}
-% %     \begin{split}
-% %         \bar{\pi} = \frac{ \sum_{ij} \pi_{ij} }{ \binom{n}{2} } \\
-% %         \sum_{ij} \pi_{ij} = \binom{n}{2} \bar{\pi}
-% %     \end{split}
-% % \end{equation}
-% 
-% 
-% \begin{equation} \label{eq_barpi}
-%     \bar{\pi} = \frac{ \sum_{ij} \pi_{ij} }{ \binom{n}{2} }
-% \end{equation}
-% 
-% 
-% Some simple arithmetic gives us...
-% 
-% \begin{equation} \label{eq_sumij}
-%     \sum_{ij} \pi_{ij} = \binom{n}{2} \bar{\pi}
-% \end{equation}
-% 
-% Now I insert this into equation \ref{eq_unqseq}:
-% 
-% \begin{equation} \label{eq_insbpi}
-%     \theta_\pi = \frac{1}{n^2} \binom{n}{2} \bar{\pi}
-% \end{equation}
-% 
-% Solving for $\bar{\pi}$ yields the following:
-% 
-% \begin{equation} \label{eq_solvebpi}
-%     \bar{\pi} = \frac{\theta_\pi n^2}{\binom{n}{2}}
-% \end{equation}
-% 
-% 
-% Testing bibliography \citep{Stevens:2009vu} and \citep{Schlotterer:2014dk}.
 
 \clearpage
 \printbibliography

@@ -1,0 +1,154 @@
+
+\section{Methods}
+
+
+All of my code was created in R version 3.3.3 \citep{RCoreTeam:2014wf}, and C++ code was 
+implemented using the \emph{`Rcpp'} package \citep{Eddelbuettel:2013if}.
+Code for the simulations can be found \href{https://github.com/lucasnell/mol_ecol}{here}.
+
+\subsection{Initial steps}
+
+I first input the aphid reference genome fasta file into R, where I first digested it 
+with the restriction enzyme of my choice (\emph{ApeKI} for now).
+Longer digested fragments are not as likely to be sequenced 
+\citep{Andrews:2016bc,Elshire:2011gn}, so I filtered for size based on the distribution 
+of fragment sizes seen by \citet{Elshire:2011gn}.
+
+
+\subsection{Creating variants}
+
+I next created 10 versions of the aphid genome, each containing SNPs, to simulate
+10 different clonal lines.
+SNP abundance and characteristics where present were based on two estimates of 
+population-genomic diversity from \citet{Bickel:2013hy}: $\theta_w = 0.0050$ and 
+$\theta_{\pi} = 0.0045$.
+From these estimates, I estimated the proportion of segregating sites and the nucleotide 
+diversity at segregating sites, respectively. 
+I will calculate the proportion of segregating sites first.
+
+$\theta_w$ is calculated as follows \citep{Watterson:1975bh}:
+
+\begin{equation} \label{eq:watterson} 
+    \theta_w = \frac{ K }{ a_n }
+\end{equation}
+
+where $K$ is the proportion of segregating sites. Variable $a_n$ is below:
+
+\begin{equation} \label{eq:a_n}
+    a_n = \sum_{i=1}^{n-1} \frac{1}{i}
+\end{equation}
+
+where $n$ is the number of individuals sampled.
+Thus the the proportion of segregating sites is simply $K = \theta_w a_n$.
+For 10 samples, $K = 0.01414$.
+
+Next, I will estimate the nucleotide diversity at segregating sites.
+$\theta_{\pi}$ is calculated using the following equation \citep{Nei:1979hm}:
+
+\begin{equation} \label{eq:nei}
+    \theta_\pi = \sum_{ij} x_i x_j \pi_{ij}
+\end{equation}
+
+Here, $x_i$ and $x_j$ represent the frequencies of the $i$\textsuperscript{th} and 
+$j$\textsuperscript{th} unique sequences respectively and $\pi_{ij}$ represents the
+proportion of divergent sequence between the $i$\textsuperscript{th} and 
+$j$\textsuperscript{th} unique sequences.
+If I assume that all lines will be unique sequences—a safe assumption if whole
+genomes are considered—then the above equation can be expressed as follows:
+
+\begin{equation} \label{eq:unqseq}
+    \theta_\pi = \frac{1}{n^2} \sum_{ij} \pi_{ij}
+\end{equation}
+
+
+
+
+Then, since the number of total pairwise combinations between $n$ sequences is
+${n \choose 2}$, we can calculate $\bar{\pi}$, the mean proportional
+sequence divergence between any two sequences, as such:
+
+\begin{equation} \label{eq:barpi}
+    \bar{\pi} = \frac{ \sum_{ij} \pi_{ij} }{ {n \choose 2} }
+\end{equation}
+
+Some simple arithmetic gives us...
+
+\begin{equation} \label{eq:sumij}
+    \sum_{ij} \pi_{ij} = {n \choose 2} \bar{\pi}
+\end{equation}
+
+Now I insert this into equation \ref{eq:unqseq}:
+
+\begin{equation} \label{eq:insbpi}
+    \theta_\pi = \frac{1}{n^2} {n \choose 2} \bar{\pi}
+\end{equation}
+
+Solving for $\bar{\pi}$ yields the following:
+
+\begin{equation} \label{eq:solvebarpi}
+    \bar{\pi} = \frac{\theta_\pi n^2}{{n \choose 2}}
+\end{equation}
+
+
+Since I have already calculated the proportion of segregated sites, I want the mean
+divergence at segregated sites only.
+To only consider segregated sites, I divide the whole expression by the proportion 
+of segregated sites.
+This leaves me with the proportional nucleotide divergence between two sequences
+at segregating sites, $\bar{\pi}_{s}$:
+
+\begin{equation} \label{eq:barpi_s}
+    \bar{\pi}_{s} = \frac{\theta_\pi n^2}{K {n \choose 2}}
+\end{equation}
+
+For the estimates above, $\bar{\pi}_s = 0.7072$. At each segregating (i.e., SNP) site,
+I inserted random nucleotide frequencies that matched closest to this pairwise
+difference.
+
+\subsection{Preparing sequences}
+
+The last step in R was to prepare sequences for simulation.
+This involved making sure all sequences were at least as long as the anticipated read 
+length (100bp), adding barcodes, and removing sections of the fragments that won't be 
+sequenced (inner portions far from cut sites) \citep{Elshire:2011gn,Davey:2011ip}.
+
+\subsection{Simulating Illumina reads}
+
+I used the ART sequencing simulator \citep{Huang:2012kq} to simulate single-end, 100bp
+Illumina reads.
+Because I only wanted fragments to be sequenced from the ends (i.e., no further 
+digestion), I simulated paired-end reads with the mean size of DNA fragments set to
+200bp (100bp from each end) with a standard deviation of zero.
+I also forced R2 reads to have the same error and mapping quality profile as R1.
+
+I simulated $100\times$ coverage for all samples across the entire genome.
+
+
+\subsection{Downstream analyses}
+
+I next aligned the pooled sample and all separated individual samples to the aphid genome
+using BWA-MEM \citep{Li:2013wn}. 
+Individual samples were created by filtering the \texttt{fastq} file output from ART
+by sample name. Thus all the reads found in a given sample \texttt{fastq} file were also
+present in the pooled \texttt{fastq} file.
+Those resulting \texttt{SAM} files were summarized using the mpileup function in 
+samtools, resulting in a single \texttt{mpileup} file.
+That file was input to Popoolation2 \citep{Kofler:2011ds}, which creates a much more 
+concise summary of the output, a \texttt{sync} file.
+
+Figure \ref{fig:methods_overview} contains an overview of this simulation process.
+
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=6in]{sim_methods.pdf}
+    \caption{Overview of methods used to simulate GBS data and summary. The gray box
+        indicates steps run entirely in R, each represented by a red arrow.
+        Black dashed arrows represent file inputs to a program, while solid black arrows
+        show output from a program.
+        Rounded rectangles are file formats, while rectangles are programs.
+        ART = ART sequencing simulator, BWA = Burrows-Wheeler Aligner
+        }
+    \label{fig:methods_overview}
+\end{figure}
+
