@@ -63,18 +63,18 @@ parse_sync <- function(fn, n_samps = 10, filter_same = TRUE) {
 
 
 
-# Figure of read depths (commented bc it takes ~5-6 minutes)
-system.time(sync <- parse_sync('/Volumes/750gb/allele_freq/apeki.sync', 10, FALSE))
-
-ss <- sync %>%
-    filter(samp == 's_01', dep > 0)
-dep_plot <- ss %>%
-    ggplot(aes(dep, ..density..)) +
-    geom_histogram(bins = 100, fill = 'dodgerblue') +
-    xlab('Read depth') +
-    ylab('Density')
-
-ggsave('./_paper/figs/dep_p.pdf', dep_plot, width = 6, height = 2.5)
+# # Figure of read depths (commented bc it takes ~5-6 minutes)
+# system.time(sync <- parse_sync('/Volumes/750gb/allele_freq/apeki.sync', 10, FALSE))
+# 
+# ss <- sync %>%
+#     filter(samp == 's_01', dep > 0)
+# dep_plot <- ss %>%
+#     ggplot(aes(dep, ..density..)) +
+#     geom_histogram(bins = 100, fill = 'dodgerblue') +
+#     xlab('Read depth') +
+#     ylab('Density')
+# 
+# ggsave('./_paper/figs/dep_p.pdf', dep_plot, width = 6, height = 2.5)
 
 
 
